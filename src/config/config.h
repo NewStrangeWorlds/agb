@@ -29,6 +29,8 @@ struct ModelConfig {
   double min_wavelength = 0;
   double max_wavelength = 0;
 
+  size_t nb_core_impact_param = 20;
+
   std::vector<std::string> opacity_species_symbol;
   std::vector<std::string> opacity_species_folder;
 };

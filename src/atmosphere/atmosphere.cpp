@@ -47,6 +47,7 @@ Atmosphere::Atmosphere(ModelConfig* config_)
 }
 
 
+
 std::vector<double> Atmosphere::cgsToBar(const std::vector<double> pressure_data)
 {
   std::vector<double> pressure_data_bar = pressure_data;

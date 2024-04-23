@@ -21,6 +21,7 @@ class Atmosphere{
     ~Atmosphere() {}
 
     size_t nb_grid_points = 0;
+    const size_t nb_chemistry_species = constants::species_data.size();
 
     std::vector<double> radius_grid;
     std::vector<double> pressure;
@@ -30,13 +31,17 @@ class Atmosphere{
     std::vector<double> temperature_dust;
     std::vector<double> mass_density;
     std::vector<double> velocity;
-    
-    const size_t nb_chemistry_species = constants::species_data.size();
+
     std::vector<std::vector<double>> number_densities;
     std::vector<double> mean_molecuar_weight;
 
     std::vector<std::vector<double>> absorption_coeff;
     std::vector<std::vector<double>> scattering_coeff;
+
+    std::vector<std::vector<double>> eddington_flux;
+    std::vector<std::vector<double>> flux;
+    std::vector<std::vector<double>> mean_intensity;
+    std::vector<std::vector<double>> eddington_k;
 
     void equationOfState();
   protected:

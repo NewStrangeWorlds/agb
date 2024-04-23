@@ -11,6 +11,7 @@
 #include "../atmosphere/atmosphere.h"
 #include "../chemistry/fastchem_chemistry.h"
 #include "../transport_coefficients/transport_coeff.h"
+#include "../radiative_transfer/radiative_transfer.h"
 
 namespace agb {
 
@@ -28,6 +29,7 @@ class AGBStarModel{
     Atmosphere atmosphere;
     FastChemChemistry chemistry;
     TransportCoefficients transport_coeff;
+    RadiativeTransfer radiative_transfer;
   protected:
 };
 

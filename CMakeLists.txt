@@ -50,7 +50,10 @@ set(SRC
   src/transport_coefficients/opacity_species.cpp
   src/transport_coefficients/sampled_data.cpp
   src/transport_coefficients/species_rayleigh_cross_sections.cpp
-  src/transport_coefficients/transport_coeff.cpp)
+  src/transport_coefficients/transport_coeff.cpp
+  src/radiative_transfer/radiative_transfer.cpp
+  src/radiative_transfer/impact_parameter.cpp
+  src/radiative_transfer/radiation_field.cpp)
   
 
 

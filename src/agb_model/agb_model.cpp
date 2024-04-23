@@ -14,6 +14,7 @@ AGBStarModel::AGBStarModel(const std::string folder)
  , atmosphere(&config)
  , chemistry(config.model_folder+config.fastchem_parameter_file)
  , transport_coeff(&config, &spectral_grid, config.opacity_species_symbol, config.opacity_species_folder)
+ , radiative_transfer(&config, &spectral_grid, &atmosphere)
 {
   // std::cout << "spectral points " << spectral_grid.nbSpectralPoints() << "\n";
 
@@ -40,6 +41,8 @@ AGBStarModel::AGBStarModel(const std::string folder)
       atmosphere.number_densities[i], 
       atmosphere.absorption_coeff[i], 
       atmosphere.scattering_coeff[i]);
+
+  radiative_transfer.solveRadiativeTransfer();
 }
 
 
