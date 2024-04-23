@@ -77,6 +77,21 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   file >> c_o_ratio;
   std::cout << "- C/O: " << c_o_ratio << "\n";
 
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+
+  file >> fastchem_parameter_file;
+  std::cout << "- FastChem parameter file: " << fastchem_parameter_file << "\n";
+
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+
+  file >> starting_model_path;
+  std::cout << "- starting model: " << starting_model_path << "\n";
+
 
   std::getline(file, line);
   std::getline(file, line);
@@ -98,6 +113,10 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::cout << "- spectral resolution: " << spectral_resolution << "\n";
 
   wavenumber_file_path = opacity_path + "wavenumber_full.dat";
+  
+  std::getline(file, line);
+  std::getline(file, line);
+  readOpacityConfig(file);
 
   
   // std::getline(file, line);
@@ -124,6 +143,38 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
 
 
   return true;
+}
+
+
+void ModelConfig::readOpacityConfig(std::fstream& file)
+{
+  std::string line;
+  std::getline(file, line);
+  
+  
+  while(std::getline(file, line))
+  {
+    std::istringstream input(line);
+
+    std::string species, folder;
+
+    input >> species >> folder;
+    
+    if (species.length() > 0 && folder.length() > 0)
+    {
+      opacity_species_symbol.push_back(species);
+      opacity_species_folder.push_back(folder);
+    }
+    
+  }
+
+
+  std::cout << "- Opacity species:\n";
+  for (size_t i=0; i<opacity_species_symbol.size(); ++i)
+    std::cout << "   species " << opacity_species_symbol[i] << "\t folder: " << opacity_species_folder[i] << "\n"; 
+  
+  
+  std::cout << "\n";
 }
 
 

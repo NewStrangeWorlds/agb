@@ -42,7 +42,15 @@ set(SRC
   src/additional/aux_functions.cpp
   src/spectral_grid/spectral_grid.cpp
   src/spectral_grid/convert.cpp
-  src/spectral_grid/spectral_grid_interpolate.cpp)
+  src/spectral_grid/spectral_grid_interpolate.cpp
+  src/atmosphere/atmosphere.cpp
+  src/atmosphere/atmosphere_read_write.cpp
+  src/chemistry/fastchem_chemistry.cpp
+  src/transport_coefficients/cross_section_file.cpp
+  src/transport_coefficients/opacity_species.cpp
+  src/transport_coefficients/sampled_data.cpp
+  src/transport_coefficients/species_rayleigh_cross_sections.cpp
+  src/transport_coefficients/transport_coeff.cpp)
   
 
 
