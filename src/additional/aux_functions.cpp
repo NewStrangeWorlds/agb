@@ -250,6 +250,18 @@ double planckFunctionWavelength(const double temperature, const double wavelengt
 
 
 
+double planckFunctionDerivWavelength(const double temperature, const double wavelength_micron)
+{
+  const double wavelength_cm = wavelength_micron * 1e-4;
+
+  return constants::planck_h*constants::planck_h * std::pow(constants::light_c, 3.) 
+         / (2 * constants::boltzmann_k * std::pow(wavelength_cm, 6.0) 
+           * std::pow(std::sinh(constants::planck_h * constants::light_c / (2*constants::boltzmann_k * wavelength_cm * temperature)), 2.0) 
+           * temperature*temperature);
+}
+
+
+
 double linearInterpolation(const double x1, const double x2, const double y1, const double y2, const double x)
 {
 

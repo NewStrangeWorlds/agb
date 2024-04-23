@@ -17,6 +17,8 @@
 #include "../spectral_grid/spectral_grid.h"
 #include "../config/config.h"
 #include "../atmosphere/atmosphere.h"
+#include "../additional/quadrature.h"
+#include "../additional/physical_const.h"
 
 namespace agb{
 
@@ -34,12 +36,11 @@ RadiativeTransfer::RadiativeTransfer(
   , nb_spectral_points(spectral_grid->nbSpectralPoints())
   , radiation_field(nb_grid_points, RadiationField(nb_spectral_points))
 {
-  
-  eddington_factors.assign(nb_grid_points, std::vector<double>(nb_spectral_points, 0.0));
-
+  eddington_factor_f.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
+  eddington_factor_h.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   extinction_coeff.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
-
   source_function.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
+  sphericality_factor.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
 
   createImpactParameterGrid();
 
@@ -61,6 +62,67 @@ void RadiativeTransfer::calcSourceFunction()
 }
 
 
+double RadiativeTransfer::boundaryFluxCorrection()
+{
+  std::vector<double> y(nb_spectral_points, 0);
+
+  for (size_t i=0; i<nb_spectral_points; ++i)
+    y[i] = aux::planckFunctionDerivWavelength(
+      atmosphere->temperature_gas[0], 
+      spectral_grid->wavelength_list[i])
+      / extinction_coeff[i][0];
+  
+  const double integral = -aux::quadratureTrapezoidal(spectral_grid->wavelength_list_cm, y);
+  const double boundary_flux = config->stellar_luminosity 
+                               / (16. * constants::pi * constants::pi * std::pow(atmosphere->radius[0],2.));
+  
+  return boundary_flux/integral;
+}
+
+
+
+void RadiativeTransfer::calcEddingtonFactors()
+{
+  for (size_t i=0; i<nb_spectral_points; ++i)
+  {
+    for (size_t j=0; j<nb_grid_points; ++j)
+    {
+      eddington_factor_f[i][j] = radiation_field[j].eddington_k_impact[i]/radiation_field[j].mean_intensity_impact[i];
+      eddington_factor_h[i][j] = radiation_field[j].eddington_flux_impact[i]/radiation_field[j].mean_intensity_impact[i];
+    }
+  }
+
+}
+
+
+void RadiativeTransfer::calcSphericalityFactor()
+{
+
+  for (size_t i=0; i<nb_spectral_points; ++i)
+  { 
+    std::vector<double> y(nb_grid_points, 0);
+
+    for (size_t j=0; j<nb_grid_points; ++j)
+      y[j] = (3*eddington_factor_f[i][j] - 1)/(atmosphere->radius[j]*eddington_factor_f[i][j]);
+
+    sphericality_factor[i][0] = 1.0;
+    
+    double integral = 0;
+
+    for (size_t j=1; j<nb_grid_points; ++j)
+    {
+      double delta_q = (atmosphere->radius[j] - atmosphere->radius[j-1])
+                       * (y[j] + y[j+1]) / 2.0;
+      integral += delta_q;
+
+      sphericality_factor[i][j] = std::exp(integral 
+                                 + std::log(atmosphere->radius[0]*atmosphere->radius[0]
+                                          /(atmosphere->radius[j]*atmosphere->radius[j])));
+    }
+  }
+
+}
+
 
 void RadiativeTransfer::solveRadiativeTransfer()
 {
@@ -70,16 +132,42 @@ void RadiativeTransfer::solveRadiativeTransfer()
 
   calcSourceFunction();
 
-  impact_parameter_grid[0].solveRadiativeTransfer(200, extinction_coeff[200], source_function[200]);
+  double boundary_flux_correction = boundaryFluxCorrection();
+  std::vector<double> boundary_planck_derivative(nb_spectral_points, 0.);
 
-  exit(0);
-  
+  for (size_t i=0; i<nb_spectral_points; ++i)
+    boundary_planck_derivative[i] = aux::planckFunctionDerivWavelength(
+      atmosphere->temperature_gas[0], 
+      spectral_grid->wavelength_list_cm[i]);
+
+  // impact_parameter_grid[30].solveRadiativeTransfer(
+  //   100,
+  //   boundary_planck_derivative[100],
+  //   boundary_flux_correction,
+  //   extinction_coeff[100],
+  //   source_function[100]);
+
+  // exit(0);
+
   for (size_t i=0; i<nb_spectral_points; ++i)
     for (auto & ip : impact_parameter_grid)
       ip.solveRadiativeTransfer(
-        i, 
+        i,
+        boundary_planck_derivative[i],
+        boundary_flux_correction,
         extinction_coeff[i],
         source_function[i]);
+  
+  for (size_t i=0; i<nb_grid_points; ++i)
+    radiation_field[i].angularIntegration();
+
+  calcEddingtonFactors();
+  calcSphericalityFactor();
+
+  for (size_t i=0; i<nb_grid_points; ++i)
+    std::cout << i << "\t" << radiation_field[i].mean_intensity_impact[100] << "\t" << radiation_field[i].eddington_flux_impact[100] << "\t" << radiation_field[i].eddington_k_impact[100] << "\t" << radiation_field[i].eddington_k_impact[100]/radiation_field[i].mean_intensity_impact[100] << "\t" << sphericality_factor[100][i] << "\n";
+
+  exit(0);
 }
 
 

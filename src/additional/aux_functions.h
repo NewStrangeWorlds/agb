@@ -9,6 +9,7 @@ namespace agb{ namespace aux{
 
 double planckFunctionWavenumber(const double temperature, const double wavenumber);
 double planckFunctionWavelength(const double temperature, const double wavelength);
+double planckFunctionDerivWavelength(const double temperature, const double wavelength);
 double linearInterpolation(const double x1, const double x2, const double y1, const double y2, const double x);
 double voigtProfile(const double x, const double gaussian_width, const double lorentz_width);
 

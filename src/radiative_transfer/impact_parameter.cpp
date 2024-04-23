@@ -16,6 +16,8 @@
 #include "../spectral_grid/spectral_grid.h"
 #include "../config/config.h"
 #include "../atmosphere/atmosphere.h"
+#include "../additional/tri_diagonal_matrix.h"
+#include "../additional/aux_functions.h"
 
 
 namespace agb{
@@ -78,6 +80,7 @@ void RadiativeTransfer::createZGrids()
 
       impact_parameter_grid[k].z_grid[i].z = std::sqrt(d);
       impact_parameter_grid[k].z_grid[i].radius_index = j;
+      impact_parameter_grid[k].z_grid[i].radius = atmosphere->radius[j];
     }
 }
 
@@ -86,7 +89,6 @@ void RadiativeTransfer::createZGrids()
 //the outside towards the inside
 //uses a trapezoidal rule
 std::vector<double> ImpactParam::opticalDepth(
-  const size_t nu,
   const std::vector<double>& extinction_coeff)
 {
   std::vector<double> optical_depth(nb_z_points, 0.0);
@@ -95,7 +97,7 @@ std::vector<double> ImpactParam::opticalDepth(
   {
     double q = -(z_grid[i].radius - z_grid[i+1].radius) 
                * (extinction_coeff[z_grid[i].radius_index] 
-                + extinction_coeff[z_grid[i+1].radius_index]);
+                + extinction_coeff[z_grid[i+1].radius_index]) / 2.0;
     optical_depth[i] = optical_depth[i+1] + q;
   }
 
@@ -103,73 +105,101 @@ std::vector<double> ImpactParam::opticalDepth(
 }
 
 
-
-void ImpactParam::solveRadiativeTransfer(
-  const size_t nu,
-  const std::vector<double>& extinction_coeff,
-  const std::vector<double>& source_function)
+void ImpactParam::assembleSystem(
+  const std::vector<double>& optical_depth,
+  const std::vector<double>& source_function,
+  const double boundary_planck_derivative,
+  const double boundary_flux_correction,
+  const double boundary_exctinction_coeff,
+  aux::TriDiagonalMatrix& M,
+  std::vector<double>& rhs)
 {
+  double hr = optical_depth[1] - optical_depth[0];
+
+  M.b[0] = - 1/hr - hr/2;
+  M.c[0] = 1/hr;
+
+  if (z_grid[0].z == 0)
+  {
+    rhs[0] = - hr/2 * source_function[0];
+  }
+  else
+  {
+    rhs[0] = - hr/2 * source_function[0] + z_grid[0].angle_point->angle
+		        * 3 * boundary_planck_derivative * boundary_flux_correction / boundary_exctinction_coeff;
+  }
   
-  std::vector<double> optical_depth = opticalDepth(
-    nu,
-    extinction_coeff);
- 
-  for (size_t i=0; i<nb_z_points; ++i)
-    std::cout << i << "\t" << optical_depth[i] << "\t" << extinction_coeff[z_grid[i].radius_index] << "\n";
+  for (size_t i=1; i<nb_z_points-1; ++i)
+  {
+    double hr = optical_depth[i+1] - optical_depth[i];
+    double hl = optical_depth[i] - optical_depth[i-1];
+
+    M.a[i] = 2/(hl*(hl+hr));
+    M.b[i] = - 2/(hr*hl) - 1;
+    M.c[i] = 2/(hr*(hl+hr));
+    rhs[i] = - source_function[i];
+  }
+
+  double hl = optical_depth.back() - optical_depth[nb_z_points-2];
+
+  M.a.back() = 1/hl;
+  M.b.back() = -1/hl - hl/2 + 1;
+  rhs.back() = -hl/2 *  source_function.back();
 }
 
 
-/*static void SolveImpactDGL(int imp, int freq)
-{
-  int r,a,j;
-  double* TauMesh = (double* ) calloc(ImpactMesh[imp].zPointNumber,sizeof(double));
-  double* b = (double* ) calloc(ImpactMesh[imp].zPointNumber,sizeof(double));
-  double* x = (double* ) calloc(ImpactMesh[imp].zPointNumber,sizeof(double));
-  double* SourceFunction = (double* ) calloc(ImpactMesh[imp].zPointNumber,sizeof(double));
-  struct TriDiagMatrix A;
-
-  InitTriDiagMatrix(&A,ImpactMesh[imp].zPointNumber);
-
-  if (Config.ImpactSystem.MeshCreation == RFSpline)
+//solves the radiative transfer equation along an impact parameter
+//for a given spectral index nu
+void ImpactParam::solveRadiativeTransfer(
+  const size_t nu,
+  const double boundary_planck_derivative,
+  const double boundary_flux_correction,
+  const std::vector<double>& extinction_coeff,
+  const std::vector<double>& source_function)
+{ 
+  //the uppermost impact parameter
+  if (nb_z_points == 1)
   {
-    if (ImpactMesh[imp].zPointNumber > 2)  
-	  TauMeshSplines(imp,freq,TauMesh);
-    else  
-	  TauMeshTrapez(imp,freq,TauMesh);
+    z_grid[0].angle_point->u[nu] = 0;
+
+    return;
   }
 
-  if (Config.ImpactSystem.MeshCreation == RFTrapezoid)  TauMeshTrapez(imp,freq,TauMesh);
 
+  std::vector<double> optical_depth = opticalDepth(
+    extinction_coeff);
+   
+  std::vector<double> source_function_z;
+  source_function_z.reserve(nb_z_points);
 
-  for (j=0; j<ImpactMesh[imp].zPointNumber; j++)
-	SourceFunction[j] = GetSourceFunc(ImpactMesh[imp].zMesh[j].RadiusIndex,freq);
+  for (auto & z : z_grid)
+    source_function_z.push_back(source_function[z.radius_index]);
 
-  
-  if (Config.ImpactSystem.DiscType == RFCubicSplines)  ImpactCoeffSpline(A,b,TauMesh,SourceFunction,imp,freq);
-  if (Config.ImpactSystem.DiscType == RFHermiteFormula)  ImpactCoeffHermite(A,b,TauMesh,SourceFunction,imp,freq);
-  if (Config.ImpactSystem.DiscType == RFTaylorDiff)  ImpactCoeffDiff(A,b,TauMesh,SourceFunction,imp,freq);
+  aux::TriDiagonalMatrix M(nb_z_points);
+  std::vector<double> rhs(nb_z_points, 0.);
 
-  
-  SolveTriDiagEq(A,b,x,ImpactMesh[imp].zPointNumber);
+  assembleSystem(
+    optical_depth,
+    source_function_z,
+    boundary_planck_derivative,
+    boundary_flux_correction,
+    extinction_coeff[0],
+    M,
+    rhs);
 
-  
-  for (j=0; j<ImpactMesh[imp].zPointNumber; j++)
+  std::vector<double> u = M.solve(rhs);
+
+  // for (size_t i=0; i<nb_z_points; ++i)
+  //   std::cout << i << "\t" << optical_depth[i] << "\t" << M.a[i] << "\t" << M.b[i] << "\t" << M.c[i] << "\t" << rhs[i] << "\t" << u[i] << "\n";
+
+  for (size_t i=0; i<nb_z_points; ++i)
   {
-    r = ImpactMesh[imp].zMesh[j].RadiusIndex;
-    a = ImpactMesh[imp].zMesh[j].AngleIndex;
+    //if (u[i] < 1e-45) u[i] = 1e-45;
 
-    if (x[j] < 1e-45) x[j] = 1e-45;
-	RadField[r].AngleMesh[a].U[freq] = x[j];
+    z_grid[i].angle_point->u[nu] = u[i];
   }
 
-  free(TauMesh);
-  free(x);
-  free(b);
-  free(SourceFunction);
-  FreeTriDiagMatrix(&A);
-}*/
-
-
+}
 
 
 } 

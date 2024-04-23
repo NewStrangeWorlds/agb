@@ -130,6 +130,11 @@ void SpectralGrid::createHighResGrid()
   }
   
   nb_spectral_points = wavelength_list.size();
+
+  wavelength_list_cm = wavelength_list;
+
+  for (auto & i : wavelength_list_cm)
+    i *= 1e-4;
 }
 
 

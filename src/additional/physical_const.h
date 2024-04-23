@@ -24,7 +24,7 @@ constexpr double radius_jupiter = 7.1492e9;                     //mean Jupiter r
 constexpr double mass_earth = 5.97219e24 * 1000.;               //Earth mass in g
 constexpr double mass_jupiter = 1.89813e27 * 1000.;             //Jupiter mass in g
 constexpr double mass_sun = 1.98847e30*1000;                    //Solar mass in g
-constexpr double luminosity_sun = 3.828e26;                     //Solar luminosity in W
+constexpr double luminosity_sun = 3.828e26*1e7;                 //Solar luminosity in erg s-1
 
 
 constexpr double parsec = 3.08567758135e18;                     //1 parsec in cm

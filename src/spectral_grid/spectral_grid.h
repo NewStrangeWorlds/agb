@@ -16,7 +16,8 @@ class SpectralGrid{
     SpectralGrid (ModelConfig* config);
 
     std::vector<double> wavenumber_list;      //wavenumber list used to calculate the high-res spectra
-    std::vector<double> wavelength_list;      //wavelength list used to calculate the high-res spectra
+    std::vector<double> wavelength_list;      //wavelength list used to calculate the high-res spectra in units of microns
+    std::vector<double> wavelength_list_cm;      //wavelength list used to calculate the high-res spectra in units of cm
 
     std::vector<double> wavelengthToWavenumber(
       const std::vector<double>& wavelengths);

@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 
+#include "../additional/tri_diagonal_matrix.h"
 
 namespace agb {
 
@@ -42,6 +43,7 @@ struct zPoint
 };
 
 
+
 class ImpactParam{
   public:
     std::vector<zPoint> z_grid;
@@ -50,12 +52,21 @@ class ImpactParam{
 
     void solveRadiativeTransfer(
       const size_t nu,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction,
       const std::vector<double>& extinction_coeff,
       const std::vector<double>& source_function);
   private:
     std::vector<double> opticalDepth(
-      const size_t nu,
       const std::vector<double>& extinction_coeff);
+    void assembleSystem(
+      const std::vector<double>& optical_depth,
+      const std::vector<double>& source_function,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction,
+      const double boundary_exctinction_coeff,
+      aux::TriDiagonalMatrix& M,
+      std::vector<double>& rhs);
 };
 
 
@@ -67,8 +78,13 @@ struct RadiationField
   std::vector<double> eddington_flux;
   std::vector<double> mean_intensity;
   std::vector<double> eddington_factor;
-  std::vector<double> sphericality_factor;
   std::vector<AnglePoint> angle_grid;
+
+  std::vector<double> mean_intensity_impact;
+  std::vector<double> eddington_k_impact;
+  std::vector<double> eddington_flux_impact;
+
+  std::vector<double> angles;
   
   size_t radius_index = 0;
   size_t nb_angles = 0;
@@ -77,6 +93,8 @@ struct RadiationField
     std::vector<ImpactParam>& impact_parameter_grid,
     const double radius,
     const size_t radius_index_);
+  
+  void angularIntegration();
 };
 
 
@@ -88,8 +106,6 @@ class RadiativeTransfer{
       SpectralGrid* spectral_grid_,
       Atmosphere* atmosphere_);
     ~RadiativeTransfer() {}
-    
-    std::vector<std::vector<double>> eddington_factors;
 
     void solveRadiativeTransfer();
   protected:
@@ -105,13 +121,20 @@ class RadiativeTransfer{
 
     std::vector<ImpactParam> impact_parameter_grid;
     std::vector<RadiationField> radiation_field;
-    
+
+    std::vector<std::vector<double>> eddington_factor_f;
+    std::vector<std::vector<double>> eddington_factor_h;
+    std::vector<std::vector<double>> sphericality_factor;
+
     std::vector<std::vector<double>> extinction_coeff;
     std::vector<std::vector<double>> source_function;
 
     void createImpactParameterGrid();
     void createZGrids();
     void calcSourceFunction();
+    double boundaryFluxCorrection();
+    void calcEddingtonFactors();
+    void calcSphericalityFactor();
 };
 
 

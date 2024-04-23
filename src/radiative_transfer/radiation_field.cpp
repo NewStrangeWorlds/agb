@@ -16,6 +16,7 @@
 #include "../spectral_grid/spectral_grid.h"
 #include "../config/config.h"
 #include "../atmosphere/atmosphere.h"
+#include "../additional/quadrature.h"
 
 
 namespace agb{
@@ -26,7 +27,10 @@ RadiationField::RadiationField(const size_t nb_spectral_points)
   eddington_factor.assign(nb_spectral_points, 0.0);
   eddington_flux.assign(nb_spectral_points, 0.0);
   mean_intensity.assign(nb_spectral_points, 0.0);
-  sphericality_factor.assign(nb_spectral_points, 0.0);
+
+  mean_intensity_impact.assign(nb_spectral_points, 0.);
+  eddington_flux_impact.assign(nb_spectral_points, 0.);
+  eddington_k_impact.assign(nb_spectral_points, 0.);
 }
 
 
@@ -76,6 +80,35 @@ void RadiationField::createAngleGrid(
 
     if (angle_it == angle_grid.end())
       break;
+  }
+
+  angles.assign(nb_angles, 0);
+
+  for (size_t i=0; i<nb_angles; ++i)
+    angles[i] = angle_grid[i].angle;
+}
+
+
+void RadiationField::angularIntegration()
+{
+  std::vector<double> y(nb_angles, 0);
+  
+  for (size_t i=0; i<mean_intensity.size(); ++i)
+  {
+    for (size_t j=0; j<nb_angles; ++j)
+      y[j] = angle_grid[j].u[i];
+    
+    mean_intensity_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
+
+    for (size_t j=0; j<nb_angles; ++j)
+      y[j] *= angles[j];
+
+    eddington_flux_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
+
+    for (size_t j=0; j<nb_angles; ++j)
+      y[j] *= angles[j];
+
+    eddington_k_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
   }
 
 }
