@@ -53,7 +53,8 @@ set(SRC
   src/transport_coefficients/transport_coeff.cpp
   src/radiative_transfer/radiative_transfer.cpp
   src/radiative_transfer/impact_parameter.cpp
-  src/radiative_transfer/radiation_field.cpp)
+  src/radiative_transfer/radiation_field.cpp
+  src/radiative_transfer/moment_system.cpp)
   
 
 

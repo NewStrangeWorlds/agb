@@ -250,13 +250,21 @@ double planckFunctionWavelength(const double temperature, const double wavelengt
 
 
 
+double planckFunctionDerivWavenumber(const double temperature, const double wavenumber)
+{
+  return std::pow(constants::light_c, 3) * constants::planck_h*constants::planck_h * std::pow(wavenumber, 4)
+         / (2 * constants::boltzmann_k *temperature*temperature
+            * std::pow(std::sinh(constants::light_c*constants::planck_h*wavenumber/(2*constants::boltzmann_k*temperature)), 2));
+}
+
+
 double planckFunctionDerivWavelength(const double temperature, const double wavelength_micron)
 {
   const double wavelength_cm = wavelength_micron * 1e-4;
 
-  return constants::planck_h*constants::planck_h * std::pow(constants::light_c, 3.) 
-         / (2 * constants::boltzmann_k * std::pow(wavelength_cm, 6.0) 
-           * std::pow(std::sinh(constants::planck_h * constants::light_c / (2*constants::boltzmann_k * wavelength_cm * temperature)), 2.0) 
+  return constants::planck_h*constants::planck_h * std::pow(constants::light_c, 3) 
+         / (2 * constants::boltzmann_k * std::pow(wavelength_cm, 6) 
+           * std::pow(std::sinh(constants::planck_h * constants::light_c / (2*constants::boltzmann_k * wavelength_cm * temperature)), 2) 
            * temperature*temperature);
 }
 

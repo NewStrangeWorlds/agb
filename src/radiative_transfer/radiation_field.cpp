@@ -29,7 +29,6 @@ RadiationField::RadiationField(const size_t nb_spectral_points)
   mean_intensity.assign(nb_spectral_points, 0.0);
 
   mean_intensity_impact.assign(nb_spectral_points, 0.);
-  eddington_flux_impact.assign(nb_spectral_points, 0.);
   eddington_k_impact.assign(nb_spectral_points, 0.);
 }
 
@@ -98,17 +97,12 @@ void RadiationField::angularIntegration()
     for (size_t j=0; j<nb_angles; ++j)
       y[j] = angle_grid[j].u[i];
     
-    mean_intensity_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
+    mean_intensity_impact[i] = - aux::quadratureTrapezoidal(angles, y);
 
     for (size_t j=0; j<nb_angles; ++j)
-      y[j] *= angles[j];
+      y[j] *= angles[j]*angles[j];
 
-    eddington_flux_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
-
-    for (size_t j=0; j<nb_angles; ++j)
-      y[j] *= angles[j];
-
-    eddington_k_impact[i] = - 0.5 * aux::quadratureTrapezoidal(angles, y);
+    eddington_k_impact[i] = - aux::quadratureTrapezoidal(angles, y);
   }
 
 }

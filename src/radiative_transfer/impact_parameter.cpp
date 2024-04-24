@@ -105,7 +105,7 @@ std::vector<double> ImpactParam::opticalDepth(
 }
 
 
-void ImpactParam::assembleSystem(
+/*void ImpactParam::assembleSystem(
   const std::vector<double>& optical_depth,
   const std::vector<double>& source_function,
   const double boundary_planck_derivative,
@@ -137,15 +137,61 @@ void ImpactParam::assembleSystem(
     M.a[i] = 2/(hl*(hl+hr));
     M.b[i] = - 2/(hr*hl) - 1;
     M.c[i] = 2/(hr*(hl+hr));
-    rhs[i] = - source_function[i];
+    rhs[i] = -source_function[i];
   }
 
   double hl = optical_depth.back() - optical_depth[nb_z_points-2];
 
   M.a.back() = 1/hl;
   M.b.back() = -1/hl - hl/2 + 1;
-  rhs.back() = -hl/2 *  source_function.back();
+  rhs.back() = -hl/2 * source_function.back();
+}*/
+
+
+//spline coefficients
+void ImpactParam::assembleSystem(
+  const std::vector<double>& optical_depth,
+  const std::vector<double>& source_function,
+  const double boundary_planck_derivative,
+  const double boundary_flux_correction,
+  const double boundary_exctinction_coeff,
+  aux::TriDiagonalMatrix& M,
+  std::vector<double>& rhs)
+{
+  double hr = optical_depth[1] - optical_depth[0];
+
+  M.b[0] = hr/3.0 + 1/hr;
+  M.c[0] = hr/6.0 - 1/hr;
+
+  if (z_grid[0].z == 0)
+  {
+    rhs[0] = hr/3.0 * source_function[0] + hr/6.0 * source_function[1];
+  }
+  else
+  {
+    rhs[0] = hr/3.0 * source_function[0] + hr/6.0 * source_function[1]
+            - z_grid[0].angle_point->angle
+		        * 3 * boundary_planck_derivative * boundary_flux_correction / boundary_exctinction_coeff;
+  }
+  
+  for (size_t i=1; i<nb_z_points-1; ++i)
+  {
+    double hr = optical_depth[i+1] - optical_depth[i];
+    double hl = optical_depth[i] - optical_depth[i-1];
+
+    M.a[i] = hl/6.0 - 1/hl;
+    M.b[i] = (hl+hr)/3.0 + 1/hr + 1/hl;
+    M.c[i] = hr/6.0 - 1/hr;
+    rhs[i] = hl/6.0 * source_function[i-1] + (hl+hr)/3.0 * source_function[i] + hr/6.0 * source_function[i+1];
+  }
+
+  double hl = optical_depth.back() - optical_depth[nb_z_points-2];
+
+  M.a.back() = hl/6.0 - 1/hl;;
+  M.b.back() = hl/3.0 + 1/hl - 1;
+  rhs.back() = hl/6.0 * source_function[nb_z_points-1] + hl/3.0 * source_function.back();
 }
+
 
 
 //solves the radiative transfer equation along an impact parameter

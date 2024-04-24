@@ -28,7 +28,7 @@ struct TriDiagonalMatrix{
     if (rhs.size() != a.size())
       throw std::logic_error("TriDiagonal matrix solve: matrix and rhs vector need to have the same size!\n");
 
-    std::vector<double> d(a.size(), 0.);
+    /*std::vector<double> d(a.size(), 0.);
     std::vector<double> v(a.size(), 0.);
     
     v[0] = b[0];
@@ -45,7 +45,27 @@ struct TriDiagonalMatrix{
     x.back() = d.back()/v.back();
 
     for (int i=a.size()-2; i>-1; --i)
-      x[i] = (d[i] - c[i]*x[i+1])/v[i];
+      x[i] = (d[i] - c[i]*x[i+1])/v[i];*/
+
+    std::vector<double> cp(b.size(), 0);
+    std::vector<double> dp(b.size(), 0);
+
+    cp[0] = c[0]/b[0];
+    dp[0] = rhs[0]/b[0];
+
+    for (size_t i=1; i<b.size(); ++i)
+    {
+      cp[i] = c[i]/(b[i] - a[i]*cp[i-1]);
+      dp[i] = (rhs[i] - a[i]*dp[i-1])/(b[i] - a[i]*cp[i-1]);
+    }
+
+
+    std::vector<double> x(a.size(), 0.);
+
+    x.back() = dp.back();
+
+    for (int i=a.size()-2; i>-1; --i)
+      x[i] = dp[i] - cp[i]*x[i+1];
 
     return x;
   }

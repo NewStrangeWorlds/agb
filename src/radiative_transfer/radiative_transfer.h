@@ -82,7 +82,6 @@ struct RadiationField
 
   std::vector<double> mean_intensity_impact;
   std::vector<double> eddington_k_impact;
-  std::vector<double> eddington_flux_impact;
 
   std::vector<double> angles;
   
@@ -123,10 +122,11 @@ class RadiativeTransfer{
     std::vector<RadiationField> radiation_field;
 
     std::vector<std::vector<double>> eddington_factor_f;
-    std::vector<std::vector<double>> eddington_factor_h;
+    std::vector<double> boundary_eddington_factor_h;
     std::vector<std::vector<double>> sphericality_factor;
 
     std::vector<std::vector<double>> extinction_coeff;
+    std::vector<std::vector<double>> scattering_coeff;
     std::vector<std::vector<double>> source_function;
 
     void createImpactParameterGrid();
@@ -135,6 +135,31 @@ class RadiativeTransfer{
     double boundaryFluxCorrection();
     void calcEddingtonFactors();
     void calcSphericalityFactor();
+
+    void solveMomentSystem(
+      const size_t nu,
+      const std::vector<double>& radius,
+      const std::vector<double>& radius2,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction);
+    std::vector<double> generateXGrid(
+      const std::vector<double>& radius,
+      const std::vector<double>& extinction_coeff,
+      const std::vector<double>& sphericality_factor);
+    void assembleMomentSystem(
+      const std::vector<double>& x_grid,
+      const std::vector<double>& radius,
+      const std::vector<double>& radius2,
+      const std::vector<double>& emission_coeff,
+      const std::vector<double>& extinction_coeff,
+      const std::vector<double>& scattering_coeff,
+      const std::vector<double>& eddington_factor,
+      const double boundary_eddington_h,
+      const std::vector<double>& sphericality_factor,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction,
+      aux::TriDiagonalMatrix& M,
+      std::vector<double>& rhs);
 };
 
 
