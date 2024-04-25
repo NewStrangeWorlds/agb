@@ -187,7 +187,7 @@ void ImpactParam::assembleSystem(
 
   double hl = optical_depth.back() - optical_depth[nb_z_points-2];
 
-  M.a.back() = hl/6.0 - 1/hl;;
+  M.a.back() = hl/6.0 - 1/hl;
   M.b.back() = hl/3.0 + 1/hl - 1;
   rhs.back() = hl/6.0 * source_function[nb_z_points-1] + hl/3.0 * source_function.back();
 }

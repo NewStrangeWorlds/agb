@@ -77,6 +77,7 @@ struct RadiationField
 
   std::vector<double> eddington_flux;
   std::vector<double> mean_intensity;
+
   std::vector<double> eddington_factor;
   std::vector<AnglePoint> angle_grid;
 
@@ -160,6 +161,24 @@ class RadiativeTransfer{
       const double boundary_flux_correction,
       aux::TriDiagonalMatrix& M,
       std::vector<double>& rhs);
+    void calcFlux(
+      const size_t nu,
+      const std::vector<double>& radius,
+      const std::vector<double>& radius2,
+      const std::vector<double>& source_function);
+    void assembleMomentSystemFlux(
+      const std::vector<double>& x_grid,
+      const std::vector<double>& radius2,
+      const std::vector<double>& source_function,
+      const std::vector<double>& mean_intensity,
+      const std::vector<double>& eddington_factor,
+      const std::vector<double>& sphericality_factor,
+      aux::TriDiagonalMatrix& m,
+      std::vector<double>& rhs);
+
+    double checkConvergence(
+      std::vector<std::vector<double>>& old_values,
+      std::vector<std::vector<double>>& new_values);
 };
 
 

@@ -149,8 +149,6 @@ void RadiativeTransfer::solveRadiativeTransfer()
       scattering_coeff[j][i] = atmosphere->scattering_coeff[i][j];
     }
 
-  calcSourceFunction();
-
   double boundary_flux_correction = boundaryFluxCorrection();
   std::vector<double> boundary_planck_derivative(nb_spectral_points, 0.);
 
@@ -159,32 +157,6 @@ void RadiativeTransfer::solveRadiativeTransfer()
       atmosphere->temperature_gas[0], 
       spectral_grid->wavelength_list[i]);
 
-  // impact_parameter_grid[0].solveRadiativeTransfer(
-  //   100,
-  //   boundary_planck_derivative[100],
-  //   boundary_flux_correction,
-  //   extinction_coeff[100],
-  //   source_function[100]);
-
-  // exit(0);
-
-  for (size_t i=0; i<nb_spectral_points; ++i)
-    for (auto & ip : impact_parameter_grid)
-      ip.solveRadiativeTransfer(
-        i,
-        boundary_planck_derivative[i],
-        boundary_flux_correction,
-        extinction_coeff[i],
-        source_function[i]);
-  
-  for (size_t i=0; i<nb_grid_points; ++i)
-    radiation_field[i].angularIntegration();
-  
-  calcEddingtonFactors();
-  calcSphericalityFactor();
-
-  // for (size_t i=0; i<nb_grid_points; ++i)
-  //   std::cout << i << "\t" << radiation_field[i].mean_intensity_impact[100] << "\t" << radiation_field[i].eddington_flux_impact[100] << "\t" << radiation_field[i].eddington_k_impact[100] << "\t" << radiation_field[i].eddington_k_impact[100]/radiation_field[i].mean_intensity_impact[100] << "\t" << sphericality_factor[100][i] << "\n";
   std::vector<double> radius(nb_grid_points, 0);
   std::vector<double> radius2(nb_grid_points, 0);
 
@@ -194,17 +166,87 @@ void RadiativeTransfer::solveRadiativeTransfer()
     radius2[i] = radius[i]*radius[i];
   }
 
-  solveMomentSystem(
-    200,
-    radius,
-    radius2,
-    boundary_planck_derivative[200], 
-    boundary_flux_correction);
+
+  //intial values
+  eddington_factor_f.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.33333));
+  boundary_eddington_factor_h.assign(nb_spectral_points, 0.5);
+
+  calcSphericalityFactor();
+
+
+  std::vector<std::vector<double>> eddington_factor_prev = eddington_factor_f;
+
+  for (size_t it=0; it<100; ++it)
+  { 
+    #pragma omp parallel for
+    for (size_t i=0; i<nb_spectral_points; ++i)
+      solveMomentSystem(
+        i,
+        radius,
+        radius2,
+        boundary_planck_derivative[i], 
+        boundary_flux_correction);
+
+    calcSourceFunction();
+    
+    #pragma omp parallel for
+    for (size_t i=0; i<nb_spectral_points; ++i)
+    {
+      for (auto & ip : impact_parameter_grid)
+        ip.solveRadiativeTransfer(
+          i,
+          boundary_planck_derivative[i],
+          boundary_flux_correction,
+          extinction_coeff[i],
+          source_function[i]);
+    }
+
+    for (size_t i=0; i<nb_grid_points; ++i)
+      radiation_field[i].angularIntegration();
+  
+    calcEddingtonFactors();
+    calcSphericalityFactor();
+
+    double convergence = checkConvergence(eddington_factor_prev, eddington_factor_f);
+    
+    std::cout << it << "  " << convergence << "\n";
+    
+    if (convergence < 1e-4) break;
+
+    eddington_factor_prev = eddington_factor_f;
+  }
+
+  #pragma omp parallel for
+  for (size_t i=0; i<nb_spectral_points; ++i)
+    calcFlux(
+      i,
+      radius,
+      radius2,
+      source_function[i]);
 
   for (size_t i=0; i<nb_grid_points; ++i)
-    std::cout << i << "\t" << radiation_field[i].mean_intensity_impact[200] << "\t" << radiation_field[i].mean_intensity[200] << "\n";
+    std::cout << i << "\t" << radiation_field[i].mean_intensity_impact[200] << "\t" << radiation_field[i].mean_intensity[200] << "\t" << eddington_factor_f[200][i] << "\t" << radiation_field[i].eddington_flux[200] << "\n";
 
   exit(0);
+}
+
+
+double RadiativeTransfer::checkConvergence(
+  std::vector<std::vector<double>>& old_values,
+  std::vector<std::vector<double>>& new_values)
+{
+  double max_rel_difference = 0;
+
+  for (size_t i=0; i<old_values.size(); ++i)
+    for (size_t j=0; j<old_values[i].size(); ++j)
+    {
+      double rel_difference = std::abs((old_values[i][j] - new_values[i][j])/old_values[i][j]);
+
+      if (rel_difference > max_rel_difference)
+        max_rel_difference = rel_difference;
+    }
+  
+  return max_rel_difference;
 }
 
 
