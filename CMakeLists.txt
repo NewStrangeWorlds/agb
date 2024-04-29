@@ -52,9 +52,13 @@ set(SRC
   src/transport_coefficients/species_rayleigh_cross_sections.cpp
   src/transport_coefficients/transport_coeff.cpp
   src/radiative_transfer/radiative_transfer.cpp
+  src/radiative_transfer/output.cpp
   src/radiative_transfer/impact_parameter.cpp
   src/radiative_transfer/radiation_field.cpp
-  src/radiative_transfer/moment_system.cpp)
+  src/radiative_transfer/moment_system.cpp
+  src/temperature_correction/temperature_correction.cpp
+  src/dust/dust_species.cpp
+  _deps/lx_mie-src/mie/mie.cpp)
   
 
 
@@ -71,6 +75,7 @@ FetchContent_Declare(
   GIT_TAG        e8dbeb7ec7719dbd0021d672a0b5d330e924a764
 )
 
+
 FetchContent_GetProperties(fastchem)
 set(FASTCHEM_ONLY_LIBRARY ON)
 
@@ -78,6 +83,21 @@ if (NOT fastchem_POPULATED)
   FetchContent_Populate(fastchem)
   add_subdirectory(${fastchem_SOURCE_DIR} ${fastchem_BINARY_DIR})
 endif()
+
+
+
+#download LX-MIE if necessary
+FetchContent_Declare(
+  lx_mie
+  GIT_REPOSITORY https://github.com/daniel-kitzmann/LX-MIE
+  GIT_TAG        bf62d51017ad46dd82218274c2d1b571d2ccae5f
+)
+
+FetchContent_GetProperties(lx_mie)
+if (NOT lx_mie_POPULATED)
+  FetchContent_Populate(lx_mie)
+endif()
+
 
 
 # build application

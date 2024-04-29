@@ -16,6 +16,7 @@ namespace agb {
 ModelConfig::ModelConfig(const std::string model_folder)
 {
   loadConfigFile(model_folder);
+  loadOutputConfigFile(model_folder);
 }
 
 
@@ -96,21 +97,29 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::getline(file, line);
   std::getline(file, line);
   std::getline(file, line);
+  file >> min_wavelength >> max_wavelength >> spectral_resolution;
+  
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+  
+  file >> refractive_index_file;
+
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
   
   file >> opacity_path;
 
   if (opacity_path.back() != '/')
     opacity_path.append("/");
-
-  std::getline(file, line);
-  std::getline(file, line);
-  std::getline(file, line);
-  file >> min_wavelength >> max_wavelength >> spectral_resolution;
-
-  std::cout << "- opacity folder: " << opacity_path << "\n";
+  
+  std::cout << "- refractive indices: " << refractive_index_file << "\n";
   std::cout << "- min wavelength: " << min_wavelength << "\n";
   std::cout << "- max wavelength: " << max_wavelength << "\n";
   std::cout << "- spectral resolution: " << spectral_resolution << "\n";
+  std::cout << "- opacity folder: " << opacity_path << "\n";
 
   wavenumber_file_path = opacity_path + "wavenumber_full.dat";
   
@@ -140,7 +149,6 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   
   
   std::cout << "\n";
-
 
   return true;
 }
@@ -178,4 +186,47 @@ void ModelConfig::readOpacityConfig(std::fstream& file)
 }
 
 
+
+bool ModelConfig::loadOutputConfigFile(const std::string folder_path)
+{
+  model_folder = folder_path;
+
+  if (model_folder.back() != '/')
+    model_folder.append("/");
+
+  std::string file_path = model_folder;
+  file_path.append("output.config");
+
+  
+  std::fstream file;
+  file.open(file_path.c_str(), std::ios::in);
+
+  if (file.fail()) 
+  {
+    std::cout << "Couldn't open model output options file " << file_path << "\n";
+    
+    return false;
+  }
+
+  
+  std::cout << "\nParameters found in output.config:\n";
+
+  std::string line;
+  std::string input;
+  
+  std::getline(file, line);
+
+  file >> output_spectrum_path;
+  std::cout << "- output spectrum: " << output_spectrum_path << "\n";
+  
+  if (output_spectrum_path == "None" || output_spectrum_path == "none")
+    output_spectrum_path = "";
+  else
+    output_spectrum_path = model_folder + output_spectrum_path;
+
+  std::cout << "\n";
+
+  return true;
 } 
+
+}

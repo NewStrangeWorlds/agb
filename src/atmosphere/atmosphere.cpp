@@ -39,11 +39,18 @@ Atmosphere::Atmosphere(ModelConfig* config_)
 
   nb_grid_points = radius_grid.size();
 
-  number_densities.assign(nb_grid_points, std::vector<double>(nb_chemistry_species, 0.0));
-  mean_molecuar_weight.assign(nb_grid_points, 0.0);
+  number_densities.assign(nb_grid_points, std::vector<double>(nb_chemistry_species, 0.));
+  mean_molecuar_weight.assign(nb_grid_points, 0.);
+  total_element_density.assign(nb_grid_points, 0.);
+  total_h_density.assign(nb_grid_points, 0.);
 
   absorption_coeff.resize(nb_grid_points);
   scattering_coeff.resize(nb_grid_points);
+
+  absorption_coeff_gas.resize(nb_grid_points);
+  scattering_coeff_gas.resize(nb_grid_points);
+  absorption_coeff_dust.resize(nb_grid_points);
+  scattering_coeff_dust.resize(nb_grid_points);
 }
 
 

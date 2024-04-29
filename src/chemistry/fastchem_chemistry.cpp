@@ -53,7 +53,9 @@ void FastChemChemistry::calcChemicalComposition(
   const std::vector<double>& temperature,
   const std::vector<double>& pressure,
   std::vector<std::vector<double>>& number_densities,
-  std::vector<double>& mean_molecular_weight)
+  std::vector<double>& mean_molecular_weight,
+  std::vector<double>& total_element_density,
+  std::vector<double>& total_h_density)
 {
   const double metallicity_factor = parameters[0];
   const double co_ratio = parameters[1];
@@ -104,6 +106,15 @@ void FastChemChemistry::calcChemicalComposition(
         number_densities[j][_TOTAL] = pressure[j] * 1.e6 / constants::boltzmann_k / temperature[j];
     }
 
+
+  total_element_density = output.total_element_density;
+
+  const double h_abundance = fastchem.getElementAbundance(fastchem.getSpeciesIndex("H"));
+
+  total_h_density = total_element_density;
+
+  for (auto & d : total_h_density)
+    d *= h_abundance;
 }
 
 

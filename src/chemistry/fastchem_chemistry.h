@@ -23,7 +23,9 @@ class FastChemChemistry{
       const std::vector<double>& temperature,
       const std::vector<double>& pressure,
       std::vector<std::vector<double>>& number_densities,
-      std::vector<double>& mean_molecular_weight);
+      std::vector<double>& mean_molecular_weight,
+      std::vector<double>& total_element_density,
+      std::vector<double>& total_h_density);
   private:
     fastchem::FastChem<long double> fastchem;
 

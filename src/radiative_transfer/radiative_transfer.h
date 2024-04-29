@@ -108,6 +108,9 @@ class RadiativeTransfer{
     ~RadiativeTransfer() {}
 
     void solveRadiativeTransfer();
+
+    std::vector<RadiationField> radiation_field;
+    void saveSpectrum(const std::string file_path);
   protected:
     ModelConfig* config;
     SpectralGrid* spectral_grid;
@@ -120,7 +123,6 @@ class RadiativeTransfer{
     const size_t nb_spectral_points = 0;
 
     std::vector<ImpactParam> impact_parameter_grid;
-    std::vector<RadiationField> radiation_field;
 
     std::vector<std::vector<double>> eddington_factor_f;
     std::vector<double> boundary_eddington_factor_h;
@@ -128,14 +130,15 @@ class RadiativeTransfer{
 
     std::vector<std::vector<double>> extinction_coeff;
     std::vector<std::vector<double>> scattering_coeff;
-    std::vector<std::vector<double>> source_function;
 
     void createImpactParameterGrid();
     void createZGrids();
-    void calcSourceFunction();
-    double boundaryFluxCorrection();
+
     void calcEddingtonFactors();
     void calcSphericalityFactor();
+    
+    double boundaryFluxCorrection();
+    std::vector<double> sourceFunction(const int nu);
 
     void solveMomentSystem(
       const size_t nu,
@@ -159,7 +162,7 @@ class RadiativeTransfer{
       const std::vector<double>& sphericality_factor,
       const double boundary_planck_derivative,
       const double boundary_flux_correction,
-      aux::TriDiagonalMatrix& M,
+      aux::TriDiagonalMatrix& m,
       std::vector<double>& rhs);
     void calcFlux(
       const size_t nu,
@@ -177,8 +180,8 @@ class RadiativeTransfer{
       std::vector<double>& rhs);
 
     double checkConvergence(
-      std::vector<std::vector<double>>& old_values,
-      std::vector<std::vector<double>>& new_values);
+      const std::vector<std::vector<double>>& old_values,
+      const std::vector<std::vector<double>>& new_values);
 };
 
 

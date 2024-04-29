@@ -34,9 +34,16 @@ class Atmosphere{
 
     std::vector<std::vector<double>> number_densities;
     std::vector<double> mean_molecuar_weight;
+    std::vector<double> total_element_density;
+    std::vector<double> total_h_density;
 
     std::vector<std::vector<double>> absorption_coeff;
     std::vector<std::vector<double>> scattering_coeff;
+
+    std::vector<std::vector<double>> absorption_coeff_dust;
+    std::vector<std::vector<double>> scattering_coeff_dust;
+    std::vector<std::vector<double>> absorption_coeff_gas;
+    std::vector<std::vector<double>> scattering_coeff_gas;
 
     std::vector<std::vector<double>> eddington_flux;
     std::vector<std::vector<double>> flux;

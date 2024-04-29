@@ -17,14 +17,12 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-
   std::string model_folder = argv[1];
 
-  
+
   agb::AGBStarModel agb_wind(model_folder);
 
-
-  std::cout << "test\n";
+  agb_wind.calcModel();
 
   return 0;
 }

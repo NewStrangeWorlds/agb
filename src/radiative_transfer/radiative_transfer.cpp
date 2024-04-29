@@ -27,20 +27,19 @@ RadiativeTransfer::RadiativeTransfer(
   ModelConfig* config_,
   SpectralGrid* spectral_grid_,
   Atmosphere* atmosphere_)
-  : config(config_)
+  : radiation_field(atmosphere_->nb_grid_points, RadiationField(spectral_grid_->nbSpectralPoints()))
+  , config(config_)
   , spectral_grid(spectral_grid_)
   , atmosphere(atmosphere_)
   , nb_core_impact_param(config->nb_core_impact_param)
   , nb_impact_param(nb_core_impact_param+atmosphere->nb_grid_points)
   , nb_grid_points(atmosphere->nb_grid_points)
   , nb_spectral_points(spectral_grid->nbSpectralPoints())
-  , radiation_field(nb_grid_points, RadiationField(nb_spectral_points))
 {
   eddington_factor_f.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   boundary_eddington_factor_h.assign(nb_spectral_points, 0.);
   extinction_coeff.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   scattering_coeff.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
-  source_function.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   sphericality_factor.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
 
   createImpactParameterGrid();
@@ -50,16 +49,31 @@ RadiativeTransfer::RadiativeTransfer(
 }
 
 
-void RadiativeTransfer::calcSourceFunction()
+
+std::vector<double> RadiativeTransfer::sourceFunction(
+  const int nu)
 {
+  std::vector<double> source_function(nb_grid_points, 0.);
+
   for (size_t i=0; i<nb_grid_points; ++i)
-    for (size_t j=0; j<nb_spectral_points; ++j)
-      source_function[j][i] = atmosphere->absorption_coeff[i][j] / extinction_coeff[j][i]
-        * aux::planckFunctionWavelength(
-            atmosphere->temperature_gas[i], 
-            spectral_grid->wavelength_list[j])
-        + atmosphere->scattering_coeff[i][j]/extinction_coeff[j][i] 
-        * radiation_field[i].mean_intensity[j];
+  {
+    const double extinction_coeff = atmosphere->scattering_coeff[i][nu] + atmosphere->absorption_coeff[i][nu];
+    const double planck_function_gas = aux::planckFunctionWavelength(
+      atmosphere->temperature_gas[i], 
+      spectral_grid->wavelength_list[nu]);
+
+    const double planck_function_dust = aux::planckFunctionWavelength(
+      atmosphere->temperature_dust[i], 
+      spectral_grid->wavelength_list[nu]);
+
+    source_function[i] = atmosphere->absorption_coeff_gas[i][nu] * planck_function_gas
+                        + atmosphere->absorption_coeff_dust[i][nu] * planck_function_dust
+                        + atmosphere->scattering_coeff[i][nu] * radiation_field[i].mean_intensity[nu];
+
+    source_function[i] /= extinction_coeff;
+  }
+
+  return source_function;
 }
 
 
@@ -73,7 +87,7 @@ double RadiativeTransfer::boundaryFluxCorrection()
       spectral_grid->wavelength_list[i])
       / extinction_coeff[i][0];
   
-  const double integral = -aux::quadratureTrapezoidal(spectral_grid->wavelength_list_cm, y);
+  const double integral = -aux::quadratureTrapezoidal(spectral_grid->wavelength_list, y);
   const double boundary_flux = config->stellar_luminosity 
                                / (16. * constants::pi * constants::pi * std::pow(atmosphere->radius[0],2.));
 
@@ -186,19 +200,19 @@ void RadiativeTransfer::solveRadiativeTransfer()
         radius2,
         boundary_planck_derivative[i], 
         boundary_flux_correction);
-
-    calcSourceFunction();
     
     #pragma omp parallel for
     for (size_t i=0; i<nb_spectral_points; ++i)
     {
+      std::vector<double> source_function = sourceFunction(i);
+
       for (auto & ip : impact_parameter_grid)
         ip.solveRadiativeTransfer(
           i,
           boundary_planck_derivative[i],
           boundary_flux_correction,
           extinction_coeff[i],
-          source_function[i]);
+          source_function);
     }
 
     for (size_t i=0; i<nb_grid_points; ++i)
@@ -216,24 +230,25 @@ void RadiativeTransfer::solveRadiativeTransfer()
     eddington_factor_prev = eddington_factor_f;
   }
 
+
   #pragma omp parallel for
   for (size_t i=0; i<nb_spectral_points; ++i)
+  {
+    std::vector<double> source_function = sourceFunction(i);
+
     calcFlux(
       i,
       radius,
       radius2,
-      source_function[i]);
+      source_function);
+  }
 
-  for (size_t i=0; i<nb_grid_points; ++i)
-    std::cout << i << "\t" << radiation_field[i].mean_intensity_impact[200] << "\t" << radiation_field[i].mean_intensity[200] << "\t" << eddington_factor_f[200][i] << "\t" << radiation_field[i].eddington_flux[200] << "\n";
-
-  exit(0);
 }
 
 
 double RadiativeTransfer::checkConvergence(
-  std::vector<std::vector<double>>& old_values,
-  std::vector<std::vector<double>>& new_values)
+  const std::vector<std::vector<double>>& old_values,
+  const std::vector<std::vector<double>>& new_values)
 {
   double max_rel_difference = 0;
 

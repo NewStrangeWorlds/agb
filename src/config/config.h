@@ -10,6 +10,7 @@ namespace agb {
 struct ModelConfig {
   ModelConfig(const std::string model_folder);
   bool loadConfigFile(const std::string folder);
+  bool loadOutputConfigFile(const std::string folder);
   void readOpacityConfig(std::fstream& file);
   
   std::string model_folder = "";
@@ -33,6 +34,10 @@ struct ModelConfig {
 
   std::vector<std::string> opacity_species_symbol;
   std::vector<std::string> opacity_species_folder;
+
+  std::string refractive_index_file = "";
+
+  std::string output_spectrum_path = "";
 };
 
 
