@@ -33,6 +33,8 @@ void RadiativeTransfer::saveSpectrum(
     return;
   }
 
+  std::cout << "Saving spectrum to " << file_path << "\n\n";
+
   file << std::setprecision(10) << std::scientific << "#Wavelength (micron)\tFlux (erg s-1 cm-2 micron-1)\t r2 F (cm2 erg s-1 cm-2 micron-1)\n";
   
   for (size_t i=0; i<nb_spectral_points; ++i)

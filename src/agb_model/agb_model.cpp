@@ -35,7 +35,7 @@ void AGBStarModel::calcModel()
 
   atmosphere.equationOfState();
   
-  dust_species.calcFormation();
+  dust_species.calcDistribution();
 
   for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     dust_species.calcTransportCoefficients(

@@ -46,7 +46,7 @@ DustSpecies::DustSpecies(
 
 
 
-void DustSpecies::calcFormation()
+void DustSpecies::calcDistribution()
 {
   const double condensation_temperature = 1100.;
   const double max_number_density = 5.0e-13;

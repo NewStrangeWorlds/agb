@@ -189,7 +189,8 @@ void RadiativeTransfer::solveRadiativeTransfer()
 
 
   std::vector<std::vector<double>> eddington_factor_prev = eddington_factor_f;
-
+  
+  std::cout << "Radiative transfer iteration: \n";
   for (size_t it=0; it<100; ++it)
   { 
     #pragma omp parallel for
@@ -229,6 +230,8 @@ void RadiativeTransfer::solveRadiativeTransfer()
 
     eddington_factor_prev = eddington_factor_f;
   }
+
+  std::cout << "\n";
 
 
   #pragma omp parallel for

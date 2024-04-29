@@ -25,7 +25,7 @@ class DustSpecies{
       Atmosphere* atmosphere_);
     ~DustSpecies() {}
 
-    void calcFormation();
+    void calcDistribution();
     void calcTransportCoefficients(
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,
