@@ -15,6 +15,7 @@
 
 #include "../spectral_grid/spectral_grid.h"
 #include "../config/config.h"
+#include "../additional/physical_const.h"
 #include "../atmosphere/atmosphere.h"
 #include "../additional/tri_diagonal_matrix.h"
 #include "../additional/aux_functions.h"
@@ -41,7 +42,11 @@ void RadiativeTransfer::solveMomentSystem(
     emission_coeff[i] = aux::planckFunctionWavelength(
                           atmosphere->temperature_gas[i], 
                           spectral_grid->wavelength_list[nu]) 
-                      * atmosphere->absorption_coeff[i][nu];
+                      * atmosphere->absorption_coeff_gas[i][nu]
+                      + aux::planckFunctionWavelength(
+                          atmosphere->temperature_dust[i], 
+                          spectral_grid->wavelength_list[nu]) 
+                      * atmosphere->absorption_coeff_dust[i][nu];
 
   aux::TriDiagonalMatrix m(nb_grid_points);
   std::vector<double> rhs(nb_grid_points, 0.);
@@ -86,6 +91,7 @@ std::vector<double> RadiativeTransfer::generateXGrid(
 }
 
 
+
 //Spline discretisation
 void RadiativeTransfer::assembleMomentSystem(
   const std::vector<double>& x_grid,
@@ -114,7 +120,7 @@ void RadiativeTransfer::assembleMomentSystem(
     return radius2[i]/sphericality_factor[i] / extinction_coeff[i];};
 
   const double hr = x_grid[1] - x_grid.front();
-
+  
   m.b[0] = hr/3. * b(0) + 1/hr * a[0];
   m.c[0] = hr/6. * b(1) - 1/hr * a[1];
 
@@ -177,7 +183,11 @@ void RadiativeTransfer::calcFlux(
   std::vector<double> result = m.solve(rhs);
 
   for (size_t i=0; i<nb_grid_points; ++i)
+  {
     radiation_field[i].eddington_flux[nu] = result[i]/radius2[i];
+    radiation_field[i].flux[nu] = 4. * constants::pi * radiation_field[i].eddington_flux[nu];
+  }
+
 }
 
 
@@ -227,7 +237,7 @@ void RadiativeTransfer::assembleMomentSystemFlux(
 
 
 //Taylor discretisation
-/*void RadiativeTransfer::assembleMomentSystem(
+void RadiativeTransfer::assembleMomentSystem2(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius,
   const std::vector<double>& radius2,
@@ -279,10 +289,10 @@ void RadiativeTransfer::assembleMomentSystemFlux(
   m.b.back() = -1./hl * a.back() - hl/2 * b(nb_grid_points-1) + radius2.back() * boundary_eddington_h;
 
   rhs.back() = -hl/2. * c(nb_grid_points-1) * emission_coeff.back();
-}*/
+}
 
 
-/*void RadiativeTransfer::assembleMomentSystemFlux(
+void RadiativeTransfer::assembleMomentSystemFlux2(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius2,
   const std::vector<double>& source_function,
@@ -297,13 +307,16 @@ void RadiativeTransfer::assembleMomentSystemFlux(
   for (size_t i=0; i<nb_grid_points; ++i)
     a[i] = eddington_factor[i] * sphericality_factor[i] * radius2[i];
   
-  const double hr = x_grid[1] - x_grid.front();
+  const double hr = x_grid[1] - x_grid.front(); 
   
   m.c[0] = 0.;
   m.b[0] = 1.;
   
   rhs[0] = 1./hr * (a[1]*mean_intensity[1] - a[0]*mean_intensity[0])
            - hr/2. * radius2[0]/sphericality_factor[0] * (mean_intensity[0] - source_function[0]); 
+  
+  //rhs[0] = 6./hr/hr * (a[1] - a[0])
+  //         - radius2[0]/sphericality_factor[0] * (mean_intensity[0] - source_function[0]); 
 
   for (size_t i=1; i<nb_grid_points-1; ++i)
   {
@@ -326,7 +339,7 @@ void RadiativeTransfer::assembleMomentSystemFlux(
   rhs.back() = 1/hl*(a.back() * mean_intensity.back() - a[nb_grid_points-2] * mean_intensity[nb_grid_points-2])
 	           + hl/2 * radius2.back()/sphericality_factor.back()
              * (mean_intensity.back() - source_function.back());
-}*/
+}
 
 
 }

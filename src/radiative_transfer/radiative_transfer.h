@@ -22,11 +22,13 @@ struct AnglePoint
   AnglePoint(const size_t nb_spectral_points)
   {
     u.assign(nb_spectral_points, 0.0);
+    v.assign(nb_spectral_points, 0.0);
     intensity_in.assign(nb_spectral_points, 0.0);
     intensity_out.assign(nb_spectral_points, 0.0);
   }
 
   std::vector<double> u;
+  std::vector<double> v;
   double angle;
   double quadrature_weight;
   std::vector<double> intensity_out;
@@ -67,27 +69,43 @@ class ImpactParam{
       const double boundary_exctinction_coeff,
       aux::TriDiagonalMatrix& M,
       std::vector<double>& rhs);
+    void calcV(
+      const size_t nu,
+      const std::vector<double>& u,
+      const std::vector<double>& optical_depth,
+      const std::vector<double>& source_function);
 };
 
 
 
 struct RadiationField
 {
-  RadiationField(const size_t nb_spectral_points);
+  RadiationField(SpectralGrid* spectral_grid_);
 
   std::vector<double> eddington_flux;
+  std::vector<double> flux;
   std::vector<double> mean_intensity;
+  std::vector<double> eddington_k;
+
+  double eddington_flux_int = 0;
+  double flux_int = 0;
+  double mean_intensity_int = 0;
+  double eddington_k_int = 0;
 
   std::vector<double> eddington_factor;
+  std::vector<double> sphericality_factor;
+
   std::vector<AnglePoint> angle_grid;
+  std::vector<double> angles;
 
   std::vector<double> mean_intensity_impact;
+  std::vector<double> eddington_flux_impact;
   std::vector<double> eddington_k_impact;
 
-  std::vector<double> angles;
-  
   size_t radius_index = 0;
   size_t nb_angles = 0;
+
+  SpectralGrid* spectral_grid;
 
   void createAngleGrid(
     std::vector<ImpactParam>& impact_parameter_grid,
@@ -95,6 +113,8 @@ struct RadiationField
     const size_t radius_index_);
   
   void angularIntegration();
+  void wavelengthIntegration();
+  double wavelengthIntegration(const std::vector<double>& data);
 };
 
 
@@ -164,6 +184,20 @@ class RadiativeTransfer{
       const double boundary_flux_correction,
       aux::TriDiagonalMatrix& m,
       std::vector<double>& rhs);
+    void assembleMomentSystem2(
+      const std::vector<double>& x_grid,
+      const std::vector<double>& radius,
+      const std::vector<double>& radius2,
+      const std::vector<double>& emission_coeff,
+      const std::vector<double>& extinction_coeff,
+      const std::vector<double>& scattering_coeff,
+      const std::vector<double>& eddington_factor,
+      const double boundary_eddington_h,
+      const std::vector<double>& sphericality_factor,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction,
+      aux::TriDiagonalMatrix& m,
+      std::vector<double>& rhs);
     void calcFlux(
       const size_t nu,
       const std::vector<double>& radius,
@@ -178,8 +212,17 @@ class RadiativeTransfer{
       const std::vector<double>& sphericality_factor,
       aux::TriDiagonalMatrix& m,
       std::vector<double>& rhs);
+    void assembleMomentSystemFlux2(
+      const std::vector<double>& x_grid,
+      const std::vector<double>& radius2,
+      const std::vector<double>& source_function,
+      const std::vector<double>& mean_intensity,
+      const std::vector<double>& eddington_factor,
+      const std::vector<double>& sphericality_factor,
+      aux::TriDiagonalMatrix& m,
+      std::vector<double>& rhs);
 
-    double checkConvergence(
+    std::pair<double, std::pair<size_t, size_t>> checkConvergence(
       const std::vector<std::vector<double>>& old_values,
       const std::vector<std::vector<double>>& new_values);
 };

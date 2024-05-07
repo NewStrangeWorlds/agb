@@ -37,7 +37,16 @@ struct ModelConfig {
 
   std::string refractive_index_file = "";
 
+  unsigned int nb_radiative_transfer_iter = 30;
+  double radiative_transfer_convergence = 1e-4;
+  
+  unsigned int nb_temperature_iter = 200;
+  double temperature_convergence = 1e-2;
+  double temperature_max_change = 0.005;
+  bool smooth_temperature_profile = true;
+
   std::string output_spectrum_path = "";
+  std::string output_atmosphere_path = "";
 };
 
 

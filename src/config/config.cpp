@@ -98,7 +98,41 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::getline(file, line);
   std::getline(file, line);
   file >> min_wavelength >> max_wavelength >> spectral_resolution;
+
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+  file >> nb_radiative_transfer_iter >> radiative_transfer_convergence;
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+  file >> nb_temperature_iter >> temperature_convergence >> temperature_max_change;
   
+  std::cout << "- max radiative transfer iterations: " << nb_radiative_transfer_iter << "\n";
+  std::cout << "- radiative transfer convergence criterion: " << radiative_transfer_convergence << "\n";
+  std::cout << "- max temperature iterations: " << nb_temperature_iter << "\n";
+  std::cout << "- temperature convergence criterion: " << temperature_convergence << "\n";
+  std::cout << "- max relative temperature change: " << temperature_max_change << "\n";
+
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+  file >> input;
+
+  if (input == "yes" || input == "Yes" || input == "y" || input == "Y")
+    smooth_temperature_profile = true;
+  else
+    smooth_temperature_profile = false;
+
+  if (smooth_temperature_profile)
+    std::cout << "- smooth temperature profile: yes\n";
+  else
+    std::cout << "- smooth temperature profile: no\n";
+
+
   std::getline(file, line);
   std::getline(file, line);
   std::getline(file, line);
@@ -215,9 +249,21 @@ bool ModelConfig::loadOutputConfigFile(const std::string folder_path)
   std::string input;
   
   std::getline(file, line);
+  
+  file >> output_atmosphere_path;
+  std::cout << "- output atmosphere to: " << output_atmosphere_path << "\n";
+  
+  if (output_atmosphere_path == "None" || output_atmosphere_path == "none")
+    output_atmosphere_path = "";
+  else
+    output_atmosphere_path = model_folder + output_atmosphere_path;
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
 
   file >> output_spectrum_path;
-  std::cout << "- output spectrum: " << output_spectrum_path << "\n";
+  std::cout << "- output spectrum to: " << output_spectrum_path << "\n";
   
   if (output_spectrum_path == "None" || output_spectrum_path == "none")
     output_spectrum_path = "";

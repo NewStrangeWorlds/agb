@@ -17,7 +17,9 @@ class ModelConfig;
 
 class Atmosphere{
   public:
-    Atmosphere(ModelConfig* config_);
+    Atmosphere(
+      ModelConfig* config_,
+      const size_t nb_spectral_points);
     ~Atmosphere() {}
 
     size_t nb_grid_points = 0;
@@ -36,28 +38,26 @@ class Atmosphere{
     std::vector<double> mean_molecuar_weight;
     std::vector<double> total_element_density;
     std::vector<double> total_h_density;
-
+    
+    std::vector<std::vector<double>> extinction_coeff;
     std::vector<std::vector<double>> absorption_coeff;
     std::vector<std::vector<double>> scattering_coeff;
-
+    
+    std::vector<std::vector<double>> extinction_coeff_dust;
     std::vector<std::vector<double>> absorption_coeff_dust;
     std::vector<std::vector<double>> scattering_coeff_dust;
+    std::vector<std::vector<double>> extinction_coeff_gas;
     std::vector<std::vector<double>> absorption_coeff_gas;
     std::vector<std::vector<double>> scattering_coeff_gas;
 
-    std::vector<std::vector<double>> eddington_flux;
-    std::vector<std::vector<double>> flux;
-    std::vector<std::vector<double>> mean_intensity;
-    std::vector<std::vector<double>> eddington_k;
-
     void equationOfState();
+    void writeStructure(const std::string file_path);
   protected:
     ModelConfig* config;
 
     std::vector<double> cgsToBar(const std::vector<double> pressure_data);
 
     void readStructure(const std::string file_path);
-    void writeStructure(const std::string file_path);
 };
 
 

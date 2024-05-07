@@ -16,7 +16,9 @@
 
 namespace agb {
 
-Atmosphere::Atmosphere(ModelConfig* config_)
+Atmosphere::Atmosphere(
+  ModelConfig* config_,
+  const size_t nb_spectral_points)
  : config(config_)
 { 
   std::string file_path = config->model_folder + config->starting_model_path;
@@ -44,13 +46,41 @@ Atmosphere::Atmosphere(ModelConfig* config_)
   total_element_density.assign(nb_grid_points, 0.);
   total_h_density.assign(nb_grid_points, 0.);
 
-  absorption_coeff.resize(nb_grid_points);
-  scattering_coeff.resize(nb_grid_points);
+  absorption_coeff.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
 
-  absorption_coeff_gas.resize(nb_grid_points);
-  scattering_coeff_gas.resize(nb_grid_points);
-  absorption_coeff_dust.resize(nb_grid_points);
-  scattering_coeff_dust.resize(nb_grid_points);
+  scattering_coeff.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  extinction_coeff.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  absorption_coeff_gas.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  scattering_coeff_gas.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  extinction_coeff_gas.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  absorption_coeff_dust.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  scattering_coeff_dust.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
+
+  extinction_coeff_dust.assign(
+    nb_grid_points, 
+    std::vector<double>(nb_spectral_points, 0.));
 }
 
 

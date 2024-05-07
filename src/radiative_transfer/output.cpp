@@ -39,7 +39,7 @@ void RadiativeTransfer::saveSpectrum(
   
   for (size_t i=0; i<nb_spectral_points; ++i)
   {  
-    const double flux = radiation_field.back().eddington_flux[i] * 4 * constants::pi;
+    const double flux = radiation_field.back().flux[i];
     const double radius2 = atmosphere->radius.back() * atmosphere->radius.back();
 
      file << spectral_grid->wavelength_list[i] << "\t" << flux << "\t" << flux*radius2 << "\n";

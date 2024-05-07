@@ -22,13 +22,20 @@
 namespace agb{
 
 
-RadiationField::RadiationField(const size_t nb_spectral_points)
+RadiationField::RadiationField(SpectralGrid* spectral_grid_)
+ : spectral_grid(spectral_grid_)
 {
+  const size_t nb_spectral_points = spectral_grid->nbSpectralPoints();
+
   eddington_factor.assign(nb_spectral_points, 0.0);
   eddington_flux.assign(nb_spectral_points, 0.0);
+  flux.assign(nb_spectral_points, 0.0);
   mean_intensity.assign(nb_spectral_points, 0.0);
+  eddington_k.assign(nb_spectral_points, 0.0);
+  sphericality_factor.assign(nb_spectral_points, 0.0);
 
   mean_intensity_impact.assign(nb_spectral_points, 0.);
+  eddington_flux_impact.assign(nb_spectral_points, 0.);
   eddington_k_impact.assign(nb_spectral_points, 0.);
 }
 
@@ -99,12 +106,34 @@ void RadiationField::angularIntegration()
     
     mean_intensity_impact[i] = - aux::quadratureTrapezoidal(angles, y);
 
-    for (size_t j=0; j<nb_angles; ++j)
+     for (size_t j=0; j<nb_angles; ++j)
       y[j] *= angles[j]*angles[j];
 
     eddington_k_impact[i] = - aux::quadratureTrapezoidal(angles, y);
+
+    for (size_t j=0; j<nb_angles; ++j)
+      y[j] = angle_grid[j].v[i]*angles[j];
+
+    eddington_flux_impact[i] = - aux::quadratureTrapezoidal(angles, y);
   }
 
+}
+
+
+void RadiationField::wavelengthIntegration()
+{
+  eddington_flux_int = wavelengthIntegration(eddington_flux);
+  flux_int = wavelengthIntegration(flux);
+  eddington_k_int = wavelengthIntegration(eddington_k);
+  mean_intensity_int = wavelengthIntegration(mean_intensity);
+}
+
+
+double RadiationField::wavelengthIntegration(
+  const std::vector<double>& data)
+{
+  //we use a -1 because the wavelength axis is inverted
+  return -aux::quadratureTrapezoidal(spectral_grid->wavelength_list, data);
 }
 
 

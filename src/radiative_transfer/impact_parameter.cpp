@@ -221,6 +221,7 @@ void ImpactParam::solveRadiativeTransfer(
   for (auto & z : z_grid)
     source_function_z.push_back(source_function[z.radius_index]);
 
+
   aux::TriDiagonalMatrix M(nb_z_points);
   std::vector<double> rhs(nb_z_points, 0.);
 
@@ -235,18 +236,46 @@ void ImpactParam::solveRadiativeTransfer(
 
   std::vector<double> u = M.solve(rhs);
 
-  // for (size_t i=0; i<nb_z_points; ++i)
-  //   std::cout << i << "\t" << optical_depth[i] << "\t" << M.a[i] << "\t" << M.b[i] << "\t" << M.c[i] << "\t" << rhs[i] << "\t" << u[i] << "\n";
-
   for (size_t i=0; i<nb_z_points; ++i)
   {
     //if (u[i] < 1e-45) u[i] = 1e-45;
-
+    if (u[i] < 0)
+    {
+      for (size_t j=0; j<nb_z_points; ++j)
+        std::cout << "od  "<< p << "  " << j << "  " << optical_depth[j] << "\t" << source_function_z[j] << "\n";
+      exit(0);
+    }
+    
     z_grid[i].angle_point->u[nu] = u[i];
   }
+
+  calcV(
+    nu,
+    u,
+    optical_depth,
+    source_function_z);
 
 }
 
 
-} 
+
+void ImpactParam::calcV(
+  const size_t nu,
+  const std::vector<double>& u,
+  const std::vector<double>& optical_depth,
+  const std::vector<double>& source_function_z)
+{
+  z_grid.back().angle_point->v[nu] = u.back();
+
+  for (size_t i=0; i<nb_z_points-1; ++i)
+  {
+    const double hr = optical_depth[i] - optical_depth[i+1];
+    const double v = u[i]* (1./3. * hr + 1./hr) + u[i+1] * (1./6. * hr - 1./hr) - hr*(1./3. * source_function_z[i] + 1./6.*source_function_z[i+1]);
+
+    z_grid[i].angle_point->v[nu] = v;
+  }
+}
+
+
+}
 

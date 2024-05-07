@@ -19,7 +19,7 @@ class TemperatureCorrection{
     TemperatureCorrection(
       ModelConfig* config_,
       SpectralGrid* spectral_grid_,
-      std::vector<RadiationField>* radiation_field_)
+      std::vector<RadiationField>& radiation_field_)
       : config(config_)
       , spectral_grid(spectral_grid_)
       , radiation_field(radiation_field_) {}
@@ -27,12 +27,54 @@ class TemperatureCorrection{
 
     std::vector<double> calculate(
       std::vector<double>& temperature,
-      std::vector<std::vector<double>>& absorption_coeff,
-      std::vector<std::vector<double>>& scattering_coeff);
+      std::vector<double>& radius,
+      std::vector<std::vector<double>>& extinction_coeff,
+      std::vector<std::vector<double>>& absorption_coeff);
   protected:
     ModelConfig* config;
     SpectralGrid* spectral_grid;
-    std::vector<RadiationField>* radiation_field;
+    std::vector<RadiationField>& radiation_field;
+
+    void calcIntegratedQuantities(
+      const std::vector<double>& radius,
+      const std::vector<double>& temperature,
+      const std::vector<std::vector<double>>& extinction_coeff,
+      const std::vector<std::vector<double>>& absorption_coeff,
+      std::vector<double>& fq_J,
+      std::vector<double>& qx_H,
+      std::vector<double>& kappa_j,
+      std::vector<double>& kappa_b,
+      std::vector<double>& kappa_h);
+
+    std::vector<double> unsoeldLucyCorrection(
+      const std::vector<double>& temperature,
+      const std::vector<double>& radius,
+      const std::vector<double>& fq_j,
+      const std::vector<double>& qx_h,
+      const std::vector<double>& kappa_j,
+      const std::vector<double>& kappa_b);
+
+    std::vector<double> unsoeldLucyCorrection2(
+      const std::vector<double>& temperature,
+      const std::vector<double>& radius,
+      const std::vector<double>& fq_j,
+      const std::vector<double>& qx_h,
+      const std::vector<double>& kappa_j,
+      const std::vector<double>& kappa_b,
+      const std::vector<double>& kappa_h);
+
+    std::vector<double> unsoeldLucyCorrection(
+      const std::vector<double>& temperature,
+      const std::vector<double>& radius,
+      const std::vector<double>& fq_j,
+      const std::vector<double>& qx_h,
+      const std::vector<double>& kappa_j,
+      const std::vector<double>& kappa_b,
+      const std::vector<double>& kappa_h);
+
+    std::vector<double> lambdaIteration(
+      const std::vector<double>& temperature,
+      const std::vector<std::vector<double>>& absorption_coeff);
 };
 
 

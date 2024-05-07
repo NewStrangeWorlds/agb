@@ -35,6 +35,14 @@ class AGBStarModel{
     RadiativeTransfer radiative_transfer;
     TemperatureCorrection temperature_correction;
   protected:
+    bool temperatureIteration();
+    std::pair<double, size_t> checkFluxConvergence();
+    std::pair<double, size_t> checkEnergyBalance(
+      std::vector<double>& temperature,
+      std::vector<std::vector<double>>& absorption__coeff,
+      std::vector<double>& deviation);
+    void forceMonotonicProfile(std::vector<double>& data);
+    void smoothProfile(std::vector<double>& data);
 };
 
 

@@ -11,6 +11,7 @@ double planckFunctionWavenumber(const double temperature, const double wavenumbe
 double planckFunctionWavelength(const double temperature, const double wavelength);
 double planckFunctionDerivWavenumber(const double temperature, const double wavenumber);
 double planckFunctionDerivWavelength(const double temperature, const double wavelength);
+double planckFunctionIntegrated(const double temperature);
 double linearInterpolation(const double x1, const double x2, const double y1, const double y2, const double x);
 double voigtProfile(const double x, const double gaussian_width, const double lorentz_width);
 

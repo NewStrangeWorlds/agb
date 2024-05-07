@@ -27,7 +27,7 @@ RadiativeTransfer::RadiativeTransfer(
   ModelConfig* config_,
   SpectralGrid* spectral_grid_,
   Atmosphere* atmosphere_)
-  : radiation_field(atmosphere_->nb_grid_points, RadiationField(spectral_grid_->nbSpectralPoints()))
+  : radiation_field(atmosphere_->nb_grid_points, RadiationField(spectral_grid_))
   , config(config_)
   , spectral_grid(spectral_grid_)
   , atmosphere(atmosphere_)
@@ -143,9 +143,10 @@ void RadiativeTransfer::calcSphericalityFactor()
     for (size_t j=1; j<nb_grid_points; ++j)
     {
       double delta = (atmosphere->radius[j] - atmosphere->radius[j-1])
-                       * (y[j] + y[j+1]) / 2.0;
-      integral += delta;
+                       * (y[j] + y[j-1]) / 2.0;
 
+      integral += delta;
+      
       sphericality_factor[i][j] = std::exp(integral + std::log(atmosphere->radius[0]*atmosphere->radius[0]))
                                   /(atmosphere->radius[j]*atmosphere->radius[j]);
     }
@@ -191,7 +192,7 @@ void RadiativeTransfer::solveRadiativeTransfer()
   std::vector<std::vector<double>> eddington_factor_prev = eddington_factor_f;
   
   std::cout << "Radiative transfer iteration: \n";
-  for (size_t it=0; it<100; ++it)
+  for (unsigned int it=0; it<config->nb_radiative_transfer_iter; ++it)
   { 
     #pragma omp parallel for
     for (size_t i=0; i<nb_spectral_points; ++i)
@@ -201,7 +202,7 @@ void RadiativeTransfer::solveRadiativeTransfer()
         radius2,
         boundary_planck_derivative[i], 
         boundary_flux_correction);
-    
+
     #pragma omp parallel for
     for (size_t i=0; i<nb_spectral_points; ++i)
     {
@@ -222,13 +223,36 @@ void RadiativeTransfer::solveRadiativeTransfer()
     calcEddingtonFactors();
     calcSphericalityFactor();
 
-    double convergence = checkConvergence(eddington_factor_prev, eddington_factor_f);
+    for (size_t i=0; i<nb_grid_points; ++i)
+      for (size_t j=0; j<nb_spectral_points; ++j)
+        if (std::isnan(sphericality_factor[j][i]) || std::isinf(sphericality_factor[j][i]))
+        {
+          std::cout << "NaN encountered " << i << "\t" << j << "\t" << sphericality_factor[j][i-1] << "\t" << sphericality_factor[j][i] << "\t" << eddington_factor_f[j][i] << "\t" << eddington_factor_f[j][i-1] << "\n";
+ 
+          exit(0);
+        } 
+
+    std::pair<double, std::pair<size_t, size_t>> convergence = checkConvergence(eddington_factor_prev, eddington_factor_f);
     
-    std::cout << it << "  " << convergence << "\n";
+    std::cout << it << "  " << convergence.first << "  " 
+                    << convergence.second.first << "  " 
+                    << convergence.second.second << "\n";
     
-    if (convergence < 1e-4) break;
+    if (convergence.first < config->radiative_transfer_convergence) break;
 
     eddington_factor_prev = eddington_factor_f;
+  }
+
+  //transfer the important variables back to the radiation field
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    for (size_t j=0; j<nb_spectral_points; ++j)
+    {
+      radiation_field[i].eddington_factor[j] = eddington_factor_f[j][i];
+      radiation_field[i].sphericality_factor[j] = sphericality_factor[j][i];
+
+      radiation_field[i].eddington_k[j] = eddington_factor_f[j][i] * radiation_field[i].mean_intensity[j];
+    }
   }
 
   std::cout << "\n";
@@ -246,25 +270,38 @@ void RadiativeTransfer::solveRadiativeTransfer()
       source_function);
   }
 
+  // for (size_t i=0; i<nb_grid_points; ++i)
+  //   for (size_t j=0; j<nb_spectral_points; ++j)
+  //     radiation_field[i].eddington_flux[j] = radiation_field[i].eddington_flux_impact[j];
+
+
+  #pragma omp parallel for
+  for (size_t i=0; i<nb_grid_points; ++i)
+    radiation_field[i].wavelengthIntegration();
 }
 
 
-double RadiativeTransfer::checkConvergence(
+std::pair<double, std::pair<size_t, size_t>> RadiativeTransfer::checkConvergence(
   const std::vector<std::vector<double>>& old_values,
   const std::vector<std::vector<double>>& new_values)
 {
-  double max_rel_difference = 0;
+  std::pair<double, std::pair<size_t, size_t>> max_difference{0.0, {0, 0}};
 
   for (size_t i=0; i<old_values.size(); ++i)
     for (size_t j=0; j<old_values[i].size(); ++j)
     {
       double rel_difference = std::abs((old_values[i][j] - new_values[i][j])/old_values[i][j]);
 
-      if (rel_difference > max_rel_difference)
-        max_rel_difference = rel_difference;
+      if (rel_difference > max_difference.first)
+      {
+        max_difference.first = rel_difference;
+        max_difference.second.first = i;
+        max_difference.second.second = j;
+      }
+        
     }
-  
-  return max_rel_difference;
+
+  return max_difference;
 }
 
 

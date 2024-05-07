@@ -124,6 +124,15 @@ bool TransportCoefficients::addOpacitySpecies(
   }
 
 
+  //H2- free-free  continuum
+  if (species_symbol == "H2-")
+  {
+    gas_species.push_back(new GasH2m(config, spectral_grid));
+
+    return true;
+  }
+
+
   //now we try the generic ones
   for (size_t i=0; i<constants::species_data.size(); ++i)
   {
