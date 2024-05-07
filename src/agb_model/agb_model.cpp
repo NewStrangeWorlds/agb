@@ -63,11 +63,9 @@ bool AGBStarModel::temperatureIteration()
       atmosphere.absorption_coeff_dust[i], 
       atmosphere.scattering_coeff_dust[i]);
 
+
   for (unsigned int it=0; it<config.nb_temperature_iter; ++it)
   {
-    if (it > 250) config.temperature_max_change = 0.001;
-    if (it > 300 && it%50 == 0) config.temperature_max_change *= 0.5;
-
     for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     transport_coeff.calculate(
       atmosphere.temperature_gas[i], 
@@ -109,13 +107,8 @@ bool AGBStarModel::temperatureIteration()
 
     for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     {
-      double temperature_old =  atmosphere.temperature_gas[i];
       atmosphere.temperature_gas[i] += delta_temperature_gas[i];
-      atmosphere.temperature_gas[i] = std::sqrt(atmosphere.temperature_gas[i]*temperature_old);
-      
-      temperature_old =  atmosphere.temperature_dust[i];
       atmosphere.temperature_dust[i] += delta_temperature_dust[i];
-      atmosphere.temperature_dust[i] = std::sqrt(atmosphere.temperature_dust[i]*temperature_old);
     }
 
 
@@ -125,8 +118,8 @@ bool AGBStarModel::temperatureIteration()
       smoothProfile(atmosphere.temperature_dust);
     }
 
-    forceMonotonicProfile(atmosphere.temperature_gas);
-    forceMonotonicProfile(atmosphere.temperature_dust);
+    //forceMonotonicProfile(atmosphere.temperature_gas);
+    //forceMonotonicProfile(atmosphere.temperature_dust);
 
     auto flux_convergence = checkFluxConvergence();
     

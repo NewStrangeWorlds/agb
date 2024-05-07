@@ -34,7 +34,7 @@ std::vector<double> TemperatureCorrection::calculate(
   std::vector<double> qx_h(temperature.size(), 0.);
   std::vector<double> kappa_j(temperature.size(), 0.);
   std::vector<double> kappa_b(temperature.size(), 0.);
-  std::vector<double> kappa_h(temperature.size(), 0.);
+  std::vector<double> planck_function_int(temperature.size(), 0.);
 
   calcIntegratedQuantities(
     radius,
@@ -45,7 +45,7 @@ std::vector<double> TemperatureCorrection::calculate(
     qx_h,
     kappa_j,
     kappa_b,
-    kappa_h);
+    planck_function_int);
 
 
   std::vector<double> delta_temperature = unsoeldLucyCorrection(
@@ -55,7 +55,7 @@ std::vector<double> TemperatureCorrection::calculate(
     qx_h,
     kappa_j,
     kappa_b,
-    kappa_h);
+    planck_function_int);
 
   // std::vector<double> delta_temperature2 = lambdaIteration(
   //   temperature,
@@ -85,7 +85,7 @@ void TemperatureCorrection::calcIntegratedQuantities(
   std::vector<double>& qx_h,
   std::vector<double>& kappa_j,
   std::vector<double>& kappa_b,
-  std::vector<double>& kappa_h)
+  std::vector<double>& planck_function_int)
 {
 
   for (size_t i=0; i<radiation_field.size(); ++i)
@@ -102,21 +102,20 @@ void TemperatureCorrection::calcIntegratedQuantities(
 
     qx_h[i] = radiation_field[i].wavelengthIntegration(y) / radiation_field[i].eddington_flux_int;
 
-
     for (size_t j=0; j<spectral_grid->nbSpectralPoints(); ++j)
       y[j] = absorption_coeff[i][j] * radiation_field[i].mean_intensity[j];
 
     kappa_j[i] = radiation_field[i].wavelengthIntegration(y) / radiation_field[i].mean_intensity_int;
 
     for (size_t j=0; j<spectral_grid->nbSpectralPoints(); ++j)
-      y[j] = absorption_coeff[i][j] * aux::planckFunctionWavelength(temperature[i], spectral_grid->wavelength_list[j]);
+      y[j] = aux::planckFunctionWavelength(temperature[i], spectral_grid->wavelength_list[j]);
 
-    kappa_b[i] = radiation_field[i].wavelengthIntegration(y) / aux::planckFunctionIntegrated(temperature[i]);
+    planck_function_int[i] = radiation_field[i].wavelengthIntegration(y);
 
     for (size_t j=0; j<spectral_grid->nbSpectralPoints(); ++j)
-      y[j] = extinction_coeff[i][j] * radiation_field[i].eddington_flux[j];
+      y[j] = absorption_coeff[i][j] * aux::planckFunctionWavelength(temperature[i], spectral_grid->wavelength_list[j]);
 
-    kappa_h[i] = radiation_field[i].wavelengthIntegration(y) / radiation_field[i].eddington_flux_int;
+    kappa_b[i] = radiation_field[i].wavelengthIntegration(y) / planck_function_int[i];
   }
 
 }
@@ -130,7 +129,7 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
   const std::vector<double>& qx_h,
   const std::vector<double>& kappa_j,
   const std::vector<double>& kappa_b,
-  const std::vector<double>& kappa_h)
+  const std::vector<double>& planck_function_int)
 {
   const size_t nb_grid_points = radius.size();
 
@@ -138,7 +137,7 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
 
   for (int i=nb_grid_points-2; i>-1; --i)
     tau_h[i] = tau_h[i+1] + 0.5*(radius[i+1] - radius[i])*(qx_h[i] + qx_h[i+1]);
-  
+
 
   std::vector<double> delta_h(nb_grid_points, 0.);
 
@@ -162,13 +161,13 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
   for (size_t i=0; i<nb_grid_points; ++i)
   {
     double delta_b = (kappa_j[i]/kappa_b[i] * radiation_field[i].mean_intensity_int 
-                    - aux::planckFunctionIntegrated(temperature[i]))
+                    - planck_function_int[i])
                     - kappa_j[i]/kappa_b[i]/(fq_j[i] * radius[i]*radius[i]) * integral[i];
 
     delta_temperature[i] = constants::pi / (4*constants::stefan_boltzmann * std::pow(temperature[i], 3)) * delta_b;
     //delta_temperature[i] = std::pow(std::pow(temperature[i], 4) + constants::pi/constants::stefan_boltzmann * delta_b, 0.25) - temperature[i];
 
-    //std::cout << "delta " << i << "\t" << delta_h[i] << "\t" << tau_b[i] << "\t" << integral[i] << "\t" << kappa_j[i]/kappa_b[i] * radiation_field[i].mean_intensity_int - aux::planckFunctionIntegrated(temperature[i]) << "\t" << delta_b << "\t" << delta_temperature[i] << "\n";
+    //std::cout << "delta " << i << "\t" << delta_h[i] << "\t" << tau_h[i] << "\t" << integral[i] << "\t" << kappa_j[i]/kappa_b[i] * radiation_field[i].mean_intensity_int - aux::planckFunctionIntegrated(temperature[i]) << "\t" << delta_b << "\t" << delta_temperature[i] << "\n";
   }
 
   return delta_temperature;
