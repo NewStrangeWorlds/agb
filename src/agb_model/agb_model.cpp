@@ -14,7 +14,7 @@ AGBStarModel::AGBStarModel(const std::string folder)
  , spectral_grid(&config)
  , atmosphere(&config, spectral_grid.nbSpectralPoints())
  , chemistry(config.model_folder+config.fastchem_parameter_file)
- , dust_species(&config, &spectral_grid, &atmosphere)
+ , dust_species(new AnalyticDust(&config, &spectral_grid, &atmosphere, 0.1))
  , transport_coeff(&config, &spectral_grid, config.opacity_species_symbol, config.opacity_species_folder)
  , radiative_transfer(&config, &spectral_grid, &atmosphere)
  , temperature_correction(&config, &spectral_grid, radiative_transfer.radiation_field)
@@ -36,7 +36,7 @@ void AGBStarModel::calcModel()
 
   atmosphere.equationOfState();
 
-  dust_species.calcDistribution();
+  dust_species->calcDistribution();
 
   bool temperature_converged = temperatureIteration();
   std::cout << "Temperature iteration converged: " << temperature_converged << "\n\n";
@@ -58,7 +58,7 @@ bool AGBStarModel::temperatureIteration()
   //dust opacities do not depend on temperature
   //so, we only calculate them once
   for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
-    dust_species.calcTransportCoefficients(
+    dust_species->calcTransportCoefficients(
       i, 
       atmosphere.absorption_coeff_dust[i], 
       atmosphere.scattering_coeff_dust[i]);

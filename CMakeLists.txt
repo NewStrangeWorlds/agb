@@ -60,6 +60,7 @@ set(SRC
   src/radiative_transfer/moment_system.cpp
   src/temperature_correction/temperature_correction.cpp
   src/dust/dust_species.cpp
+  src/dust/analytic_dust.cpp
   _deps/lx_mie-src/mie/mie.cpp)
   
 

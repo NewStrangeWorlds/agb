@@ -1,12 +1,14 @@
  
-#ifndef _dust_species_h
-#define _dust_species_h
+#ifndef _analytic_dust_h
+#define _analytic_dust__h
 
 #include <vector>
 #include <string>
 #include <iostream>
 #include <complex>
 #include <cmath>
+
+#include "dust_species.h"
 
 
 namespace agb {
@@ -17,15 +19,16 @@ class SpectralGrid;
 class Atmosphere;
 
 
-class DustSpecies{
+class AnalyticDust: public DustSpecies{
   public:
-    DustSpecies(
+    AnalyticDust(
       ModelConfig* config_,
       SpectralGrid* spectral_grid_,
-      Atmosphere* atmosphere_);
-    ~DustSpecies() {}
+      Atmosphere* atmosphere_,
+      const double particle_radius);
+    ~AnalyticDust() {}
 
-    virtual void calcDistribution() = 0;
+    void calcDistribution();
     void calcTransportCoefficients(
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,
@@ -38,19 +41,7 @@ class DustSpecies{
     const size_t nb_grid_points = 0;
     const size_t nb_spectral_points = 0;
     const double monomer_radius = 1.28e-8;
-
-    std::vector<std::complex<double>> refractive_index; 
-    
-    std::vector<double> number_density;
-    std::vector<std::vector<double>> size_distribution;
-    std::vector<std::vector<double>> particle_radius;
-    
-    void readRefractiveIndexFile(const std::string file_path);
-    void opticalProperties(
-      double radius, 
-      std::vector<double>& absorption_efficiency, 
-      std::vector<double>& scattering_efficiency, 
-      std::vector<double>& asymmetry_parameter);
+    const double const_radius = 0;
 };
 
 

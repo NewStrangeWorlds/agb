@@ -14,6 +14,8 @@
 #include "../radiative_transfer/radiative_transfer.h"
 #include "../temperature_correction/temperature_correction.h"
 #include "../dust/dust_species.h"
+#include "../dust/analytic_dust.h"
+
 
 namespace agb {
 
@@ -30,7 +32,7 @@ class AGBStarModel{
     
     Atmosphere atmosphere;
     FastChemChemistry chemistry;
-    DustSpecies dust_species;
+    DustSpecies* dust_species;
     TransportCoefficients transport_coeff;
     RadiativeTransfer radiative_transfer;
     TemperatureCorrection temperature_correction;
