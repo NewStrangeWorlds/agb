@@ -51,7 +51,7 @@ void RadiativeTransfer::solveMomentSystem(
   aux::TriDiagonalMatrix m(nb_grid_points);
   std::vector<double> rhs(nb_grid_points, 0.);
 
-  assembleMomentSystem(
+  assembleMomentSystemSpline(
     x_grid,
     radius,
     radius2,
@@ -67,6 +67,16 @@ void RadiativeTransfer::solveMomentSystem(
     rhs);
 
   std::vector<double> result = m.solve(rhs);
+
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    if (result[i] < 0)
+    {
+      for (size_t i=0; i<nb_grid_points; ++i)
+        std::cout << "ms " << nu << "  " << i << "\t" << result[i] << "\t" << x_grid[i] << "\t" << scattering_coeff[nu][i] << "\t" << extinction_coeff[nu][i] << "\t" << emission_coeff[i] << "\t" << sphericality_factor[nu][i] << "\t" << m.a[i] << "\t" << m.b[i] << "\t" << m.c[i] << "\t" << rhs[i] << "\n";
+      exit(0);
+    }
+  }
 
   for (size_t i=0; i<nb_grid_points; ++i)
     radiation_field[i].mean_intensity[nu] = result[i];
@@ -93,7 +103,7 @@ std::vector<double> RadiativeTransfer::generateXGrid(
 
 
 //Spline discretisation
-void RadiativeTransfer::assembleMomentSystem(
+void RadiativeTransfer::assembleMomentSystemSpline(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius,
   const std::vector<double>& radius2,
@@ -170,7 +180,7 @@ void RadiativeTransfer::calcFlux(
   aux::TriDiagonalMatrix m(nb_grid_points);
   std::vector<double> rhs(nb_grid_points, 0.);
 
-  assembleMomentSystemFlux(
+  assembleMomentSystemFluxSpline(
     x_grid,
     radius2,
     source_function,
@@ -192,7 +202,7 @@ void RadiativeTransfer::calcFlux(
 
 
 //spline discretisation
-void RadiativeTransfer::assembleMomentSystemFlux(
+void RadiativeTransfer::assembleMomentSystemFluxSpline(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius2,
   const std::vector<double>& source_function,
@@ -237,7 +247,7 @@ void RadiativeTransfer::assembleMomentSystemFlux(
 
 
 //Taylor discretisation
-void RadiativeTransfer::assembleMomentSystem2(
+void RadiativeTransfer::assembleMomentSystemTaylor(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius,
   const std::vector<double>& radius2,
@@ -292,7 +302,7 @@ void RadiativeTransfer::assembleMomentSystem2(
 }
 
 
-void RadiativeTransfer::assembleMomentSystemFlux2(
+void RadiativeTransfer::assembleMomentSystemFluxTaylor(
   const std::vector<double>& x_grid,
   const std::vector<double>& radius2,
   const std::vector<double>& source_function,

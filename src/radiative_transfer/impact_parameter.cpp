@@ -105,7 +105,8 @@ std::vector<double> ImpactParam::opticalDepth(
 }
 
 
-/*void ImpactParam::assembleSystem(
+//coefficients based on Taylor differences
+void ImpactParam::assembleSystemTaylor(
   const std::vector<double>& optical_depth,
   const std::vector<double>& source_function,
   const double boundary_planck_derivative,
@@ -145,11 +146,11 @@ std::vector<double> ImpactParam::opticalDepth(
   M.a.back() = 1/hl;
   M.b.back() = -1/hl - hl/2 + 1;
   rhs.back() = -hl/2 * source_function.back();
-}*/
+}
 
 
 //spline coefficients
-void ImpactParam::assembleSystem(
+void ImpactParam::assembleSystemSpline(
   const std::vector<double>& optical_depth,
   const std::vector<double>& source_function,
   const double boundary_planck_derivative,
@@ -225,7 +226,7 @@ void ImpactParam::solveRadiativeTransfer(
   aux::TriDiagonalMatrix M(nb_z_points);
   std::vector<double> rhs(nb_z_points, 0.);
 
-  assembleSystem(
+  assembleSystemSpline(
     optical_depth,
     source_function_z,
     boundary_planck_derivative,
@@ -242,9 +243,14 @@ void ImpactParam::solveRadiativeTransfer(
     if (u[i] < 0)
     {
       for (size_t j=0; j<nb_z_points; ++j)
-        std::cout << "od  "<< p << "  " << j << "  " << optical_depth[j] << "\t" << source_function_z[j] << "\n";
+        std::cout << "od  "<< p << "  " << j << "  " << optical_depth[j] << "\t" << source_function_z[j] << "\t" << u[j] << "\n";
+
+      for (size_t j=0; j<source_function.size(); ++j)
+        std::cout << "sf  "<< j << "  " << source_function[j] << "\n";
+
       exit(0);
     }
+
     
     z_grid[i].angle_point->u[nu] = u[i];
   }

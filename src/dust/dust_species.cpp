@@ -85,7 +85,7 @@ void DustSpecies::calcDistribution()
 
   //fixed, mono-dispersed size distribution throughout the wind
   size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
-  particle_radius.assign(nb_grid_points, std::vector<double>(1, 0.1 * 1e-4)); //in cm
+  particle_radius.assign(nb_grid_points, std::vector<double>(1, 0.2 * 1e-4)); //in cm
 }
 
 

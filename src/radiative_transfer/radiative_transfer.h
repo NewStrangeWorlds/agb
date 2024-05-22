@@ -61,7 +61,15 @@ class ImpactParam{
   private:
     std::vector<double> opticalDepth(
       const std::vector<double>& extinction_coeff);
-    void assembleSystem(
+    void assembleSystemTaylor(
+      const std::vector<double>& optical_depth,
+      const std::vector<double>& source_function,
+      const double boundary_planck_derivative,
+      const double boundary_flux_correction,
+      const double boundary_exctinction_coeff,
+      aux::TriDiagonalMatrix& M,
+      std::vector<double>& rhs);
+    void assembleSystemSpline(
       const std::vector<double>& optical_depth,
       const std::vector<double>& source_function,
       const double boundary_planck_derivative,
@@ -170,7 +178,7 @@ class RadiativeTransfer{
       const std::vector<double>& radius,
       const std::vector<double>& extinction_coeff,
       const std::vector<double>& sphericality_factor);
-    void assembleMomentSystem(
+    void assembleMomentSystemSpline(
       const std::vector<double>& x_grid,
       const std::vector<double>& radius,
       const std::vector<double>& radius2,
@@ -184,7 +192,7 @@ class RadiativeTransfer{
       const double boundary_flux_correction,
       aux::TriDiagonalMatrix& m,
       std::vector<double>& rhs);
-    void assembleMomentSystem2(
+    void assembleMomentSystemTaylor(
       const std::vector<double>& x_grid,
       const std::vector<double>& radius,
       const std::vector<double>& radius2,
@@ -203,7 +211,7 @@ class RadiativeTransfer{
       const std::vector<double>& radius,
       const std::vector<double>& radius2,
       const std::vector<double>& source_function);
-    void assembleMomentSystemFlux(
+    void assembleMomentSystemFluxSpline(
       const std::vector<double>& x_grid,
       const std::vector<double>& radius2,
       const std::vector<double>& source_function,
@@ -212,7 +220,7 @@ class RadiativeTransfer{
       const std::vector<double>& sphericality_factor,
       aux::TriDiagonalMatrix& m,
       std::vector<double>& rhs);
-    void assembleMomentSystemFlux2(
+    void assembleMomentSystemFluxTaylor(
       const std::vector<double>& x_grid,
       const std::vector<double>& radius2,
       const std::vector<double>& source_function,
