@@ -32,8 +32,13 @@ class GailSedlmayrDust: public DustSpecies{
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,
       std::vector<double>& scattering_coeff);
-  protected:
+  private:
     const double monomer_radius = 1.28e-8;
+
+    double saturationVapourPressure(const double temperature);
+    double saturationRatio(
+      const double temperature, 
+      const double number_density_carbon);
 };
 
 

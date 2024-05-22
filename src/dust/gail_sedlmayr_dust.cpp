@@ -37,43 +37,40 @@ GailSedlmayrDust::GailSedlmayrDust(
 }
 
 
+//log(!) of saturation vapour pressure of graphite
+//p_vap is in units of dyn cm-2
+double GailSedlmayrDust::saturationVapourPressure(const double temperature)
+{
+
+  return (18.6516 - 85906.1/temperature) + log(1e6);
+
+}
+
+
+
+//returns the logarithm of the saturation ratio of graphite
+double GailSedlmayrDust::saturationRatio(
+  const double temperature,
+  const double number_density_carbon)
+{
+  const double p_vap = saturationVapourPressure(temperature);
+
+  const double partial_pressure = number_density_carbon 
+                                * constants::boltzmann_k * temperature;
+
+  double saturation_ratio = partial_pressure / std::exp(p_vap);
+
+  if (saturation_ratio > 1)
+    return std::log(saturation_ratio);
+  else
+    return -9999.;
+}
+
+
 
 void GailSedlmayrDust::calcDistribution()
 {
-  const double condensation_temperature = 1100.;
-  const double max_number_density = 5.0e-13;
   
-  unsigned int condensation_radius_idx = 0;
-  double condensation_radius = 0;
-
-  for (size_t i=0; i<nb_grid_points; ++i)
-  {
-    if (atmosphere->temperature_gas[i] < condensation_temperature)
-    {
-      condensation_radius_idx = i;
-      condensation_radius = atmosphere->radius_grid[i];
-
-      break;
-    }
-  }
-
-  number_density.assign(nb_grid_points, 0.);
-  
-  //analytical fit to Winters standard model
-  for (size_t i=0; i<nb_grid_points; ++i)
-  {
-    number_density[i] = max_number_density 
-                       / (std::exp((condensation_radius - atmosphere->radius_grid[i])/0.06) + 1.);
-    number_density[i] *= atmosphere->total_h_density[i];
-  }
-
-  //don't let the dust density increase towards smaller r/R*
-  for (int i=condensation_radius_idx; i>-1; i--)
-  {
-    if (number_density[i] > number_density[i+1])
-      number_density[i] = number_density[i+1];
-  }
-
 
   //fixed, mono-dispersed size distribution throughout the wind
   //size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
