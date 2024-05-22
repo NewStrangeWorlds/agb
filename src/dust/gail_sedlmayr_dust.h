@@ -1,6 +1,6 @@
  
-#ifndef _analytic_dust_h
-#define _analytic_dust__h
+#ifndef _gail_sedlmayr_dust_h
+#define _gail_sedlmayr_dust__h
 
 #include <vector>
 #include <string>
@@ -19,14 +19,13 @@ class SpectralGrid;
 class Atmosphere;
 
 
-class AnalyticDust: public DustSpecies{
+class GailSedlmayrDust: public DustSpecies{
   public:
-    AnalyticDust(
+    GailSedlmayrDust(
       ModelConfig* config_,
       SpectralGrid* spectral_grid_,
-      Atmosphere* atmosphere_,
-      const double particle_radius);
-    ~AnalyticDust() {}
+      Atmosphere* atmosphere_);
+    ~GailSedlmayrDust() {}
 
     void calcDistribution();
     void calcTransportCoefficients(
@@ -35,7 +34,6 @@ class AnalyticDust: public DustSpecies{
       std::vector<double>& scattering_coeff);
   protected:
     const double monomer_radius = 1.28e-8;
-    const double const_radius = 0;
 };
 
 

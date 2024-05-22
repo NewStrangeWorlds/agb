@@ -1,5 +1,5 @@
 
-#include "analytic_dust.h" 
+#include "gail_sedlmayr_dust.h" 
 
 #include <vector>
 #include <string>
@@ -20,20 +20,17 @@
 #include "../atmosphere/atmosphere.h"
 #include "../additional/quadrature.h"
 #include "../additional/physical_const.h"
-#include "../../_deps/lx_mie-src/mie/mie.h"
 
 
 
 namespace agb{
 
 
-AnalyticDust::AnalyticDust(
+GailSedlmayrDust::GailSedlmayrDust(
   ModelConfig* config_,
   SpectralGrid* spectral_grid_,
-  Atmosphere* atmosphere_,
-  const double particle_radius)
+  Atmosphere* atmosphere_)
   : DustSpecies(config_, spectral_grid_, atmosphere_)
-  , const_radius(particle_radius)
 {
 
 
@@ -41,7 +38,7 @@ AnalyticDust::AnalyticDust(
 
 
 
-void AnalyticDust::calcDistribution()
+void GailSedlmayrDust::calcDistribution()
 {
   const double condensation_temperature = 1100.;
   const double max_number_density = 5.0e-13;
@@ -79,8 +76,8 @@ void AnalyticDust::calcDistribution()
 
 
   //fixed, mono-dispersed size distribution throughout the wind
-  size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
-  particle_radius.assign(nb_grid_points, std::vector<double>(1, const_radius * 1e-4)); //in cm
+  //size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
+  //particle_radius.assign(nb_grid_points, std::vector<double>(1, const_radius * 1e-4)); //in cm
 }
 
 
