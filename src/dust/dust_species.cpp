@@ -115,22 +115,24 @@ void DustSpecies::calcTransportCoefficients(
   std::vector<double> scattering_efficiency;
   std::vector<double> asymmetry_parameter;
 
+  absorption_coeff.assign(nb_spectral_points, 0.);
+  scattering_coeff.assign(nb_spectral_points, 0.);
+
+  //if (number_density[radius_idx] < 1e-40) return;
+
   opticalProperties(
     particle_radius[radius_idx][0], 
     absorption_efficiency, 
     scattering_efficiency, 
     asymmetry_parameter);
 
-  absorption_coeff.assign(nb_spectral_points, 0.);
-  scattering_coeff.assign(nb_spectral_points, 0.);
-
 
   for (size_t i=0; i<nb_spectral_points; ++i)
   {
-    absorption_coeff[i] = 2. * constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
+    absorption_coeff[i] = constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
                           * absorption_efficiency[i]
                           * number_density[radius_idx];
-    scattering_coeff[i] = 2. * constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
+    scattering_coeff[i] = constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
                           * scattering_efficiency[i]
                           * number_density[radius_idx];
   }

@@ -15,6 +15,8 @@
 #include "../temperature_correction/temperature_correction.h"
 #include "../dust/dust_species.h"
 #include "../dust/analytic_dust.h"
+#include "../dust/gail_sedlmayr_dust.h"
+
 
 
 namespace agb {
