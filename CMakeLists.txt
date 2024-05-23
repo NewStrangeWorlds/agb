@@ -62,6 +62,7 @@ set(SRC
   src/dust/dust_species.cpp
   src/dust/analytic_dust.cpp
   src/dust/gail_sedlmayr_dust.cpp
+  src/dust/gail_sedlmayr_thermo_functions.cpp
   _deps/lx_mie-src/mie/mie.cpp)
   
 

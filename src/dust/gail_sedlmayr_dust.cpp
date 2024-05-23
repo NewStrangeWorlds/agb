@@ -33,44 +33,87 @@ GailSedlmayrDust::GailSedlmayrDust(
   : DustSpecies(config_, spectral_grid_, atmosphere_)
 {
 
-
-}
-
-
-//log(!) of saturation vapour pressure of graphite
-//p_vap is in units of dyn cm-2
-double GailSedlmayrDust::saturationVapourPressure(const double temperature)
-{
-
-  return (18.6516 - 85906.1/temperature) + log(1e6);
+  theta_infinity = surface_tension * 4. * constants::pi 
+                 * monomer_radius*monomer_radius / constants::boltzmann_k;
 
 }
 
 
 
-//returns the logarithm of the saturation ratio of graphite
-double GailSedlmayrDust::saturationRatio(
+double GailSedlmayrDust::nucleationRate(
   const double temperature,
-  const double number_density_carbon)
+  const double number_density_c,
+  const double number_density_c2,
+  const double number_density_c2h,
+  const double number_density_c2h2)
 {
-  const double p_vap = saturationVapourPressure(temperature);
+  
+  const double ln_saturation_ratio = saturationRatio(
+    temperature,
+    number_density_c);
 
-  const double partial_pressure = number_density_carbon 
-                                * constants::boltzmann_k * temperature;
+  if (ln_saturation_ratio <= 0)
+    return 1e-100;
 
-  double saturation_ratio = partial_pressure / std::exp(p_vap);
 
-  if (saturation_ratio > 1)
-    return std::log(saturation_ratio);
-  else
-    return -9999.;
+  const double n_star = criticalClusterSize(
+    temperature,
+    ln_saturation_ratio);
+
+  const double delta_f = freeEnergyOfFormation(
+    temperature,
+    ln_saturation_ratio,
+    n_star);
+
+  const double beta = monomerGrowthRate(
+    temperature,
+    number_density_c,
+    number_density_c2,
+    number_density_c2h,
+    number_density_c2h2);
+
+  const double z = zeldovichFactor(
+    temperature,
+    n_star,
+    ln_saturation_ratio);
+
+  const double c0 = equilibriumClusterDistribution(
+    temperature,
+    delta_f,
+    number_density_c,
+    ln_saturation_ratio);
+
+  const double a_star = monomer_surface_area * std::pow(n_star, 2./3.);
+  const double nucleation_rate = beta * a_star * z * c0;
+
+  return nucleation_rate;
 }
 
+
+
+double GailSedlmayrDust::growthRate(
+  const double temperature,
+  const double number_density_c,
+  const double number_density_c2,
+  const double number_density_c2h,
+  const double number_density_c2h2)
+{
+  double tau = monomer_surface_area * std::sqrt(constants::boltzmann_k * temperature)
+              * ( sticking_coeff[0]/std::sqrt(mass_c) * number_density_c
+              + 2 * sticking_coeff[1]/std::sqrt(mass_c2) * number_density_c2
+              + 2 * sticking_coeff[1]/std::sqrt(mass_c2h) * number_density_c2h
+              + 2 * sticking_coeff[1]/std::sqrt(mass_c2h2) * number_density_c2h2);
+
+  return 1./tau;
+}
 
 
 void GailSedlmayrDust::calcDistribution()
 {
-  
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    
+  }
 
   //fixed, mono-dispersed size distribution throughout the wind
   //size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
