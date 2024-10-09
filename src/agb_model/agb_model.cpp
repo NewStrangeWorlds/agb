@@ -33,7 +33,7 @@ void AGBStarModel::calcModel()
   for (unsigned int it=0; it<1000; ++it)
   {
     chemistryDustIteration();
-    //chemistryHydroIteration();
+    chemistryHydroIteration();
 
     bool temperature_converged = temperatureIteration();
     std::cout << "Temperature iteration converged: " << temperature_converged << "\n\n";
