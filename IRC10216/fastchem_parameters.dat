@@ -1,5 +1,5 @@
 #element abundance file   
-fastchem_data/element_abundances_solar.dat
+fastchem_data/lodders_2003_enhanced_o.dat
 
 #species data file    
 fastchem_data/logK.dat

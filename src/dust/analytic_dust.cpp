@@ -77,10 +77,24 @@ void AnalyticDust::calcDistribution()
       number_density[i] = number_density[i+1];
   }
 
-
   //fixed, mono-dispersed size distribution throughout the wind
   size_distribution.assign(nb_grid_points, std::vector<double>(1, 1.0));
   particle_radius.assign(nb_grid_points, std::vector<double>(1, const_radius * 1e-4)); //in cm
+}
+
+
+void AnalyticDust::saveOutput(const std::string file_path)
+{
+
+  //nothing to do here
+
+}
+
+
+std::vector<double> AnalyticDust::degreeOfCondensation(
+  const double element_abundance)
+{
+  return std::vector<double>(atmosphere->nb_grid_points, 0);
 }
 
 

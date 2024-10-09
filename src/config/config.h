@@ -18,6 +18,7 @@ struct ModelConfig {
   double stellar_radius = 0;
   double stellar_mass = 0;
   double stellar_luminosity = 0;
+  double stellar_mass_loss_rate = 0;
   double c_o_ratio = 0;
 
   std::string fastchem_parameter_file = "";
@@ -39,14 +40,20 @@ struct ModelConfig {
 
   unsigned int nb_radiative_transfer_iter = 30;
   double radiative_transfer_convergence = 1e-4;
+  bool use_spline_discretisation = true;
   
   unsigned int nb_temperature_iter = 200;
   double temperature_convergence = 1e-2;
   double temperature_max_change = 0.005;
   bool smooth_temperature_profile = true;
 
+  unsigned int nb_hydrodynamics_iter = 200;
+  double hydrodynamics_convergence = 1e-2;
+
   std::string output_spectrum_path = "";
   std::string output_atmosphere_path = "";
+  std::string output_dust_path = "";
+  std::string output_hydro_path = "";
 };
 
 

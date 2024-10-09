@@ -30,8 +30,12 @@ namespace agb{
 double GailSedlmayrDust::saturationVapourPressure(const double temperature)
 {
 
-  return (18.6516 - 85906.1/temperature) + log(1e6);
+  return (18.6516 - 85906.1/temperature) + std::log(1e6);
+  // const double theta = 5040./temperature;
 
+  // return  3.24595e+1 - 1.68624e+1 * theta - 5.17205e-2 * theta*theta 
+  //         + 3.99686e-3 * std::pow(theta, 3)
+  //         -1.00638e-4 * std::pow(theta, 4);
 }
 
 

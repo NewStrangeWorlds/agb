@@ -51,20 +51,37 @@ void RadiativeTransfer::solveMomentSystem(
   aux::TriDiagonalMatrix m(nb_grid_points);
   std::vector<double> rhs(nb_grid_points, 0.);
 
-  assembleMomentSystemSpline(
-    x_grid,
-    radius,
-    radius2,
-    emission_coeff,
-    extinction_coeff[nu],
-    scattering_coeff[nu],
-    eddington_factor_f[nu],
-    boundary_eddington_factor_h[nu],
-    sphericality_factor[nu],
-    boundary_planck_derivative,
-    boundary_flux_correction,
-    m,
-    rhs);
+  if (config->use_spline_discretisation)
+    assembleMomentSystemSpline(
+      x_grid,
+      radius,
+      radius2,
+      emission_coeff,
+      extinction_coeff[nu],
+      scattering_coeff[nu],
+      eddington_factor_f[nu],
+      boundary_eddington_factor_h[nu],
+      sphericality_factor[nu],
+      boundary_planck_derivative,
+      boundary_flux_correction,
+      m,
+      rhs);
+  else
+    assembleMomentSystemTaylor(
+      x_grid,
+      radius,
+      radius2,
+      emission_coeff,
+      extinction_coeff[nu],
+      scattering_coeff[nu],
+      eddington_factor_f[nu],
+      boundary_eddington_factor_h[nu],
+      sphericality_factor[nu],
+      boundary_planck_derivative,
+      boundary_flux_correction,
+      m,
+      rhs);
+
 
   std::vector<double> result = m.solve(rhs);
 
@@ -179,16 +196,27 @@ void RadiativeTransfer::calcFlux(
 
   aux::TriDiagonalMatrix m(nb_grid_points);
   std::vector<double> rhs(nb_grid_points, 0.);
-
-  assembleMomentSystemFluxSpline(
-    x_grid,
-    radius2,
-    source_function,
-    mean_intensity,
-    eddington_factor_f[nu],
-    sphericality_factor[nu],
-    m,
-    rhs);
+  
+  if (config->use_spline_discretisation)
+    assembleMomentSystemFluxSpline(
+      x_grid,
+      radius2,
+      source_function,
+      mean_intensity,
+      eddington_factor_f[nu],
+      sphericality_factor[nu],
+      m,
+      rhs);
+  else
+    assembleMomentSystemFluxTaylor(
+      x_grid,
+      radius2,
+      source_function,
+      mean_intensity,
+      eddington_factor_f[nu],
+      sphericality_factor[nu],
+      m,
+      rhs);
 
   std::vector<double> result = m.solve(rhs);
 

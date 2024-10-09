@@ -33,6 +33,9 @@ class AnalyticDust: public DustSpecies{
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,
       std::vector<double>& scattering_coeff);
+    std::vector<double> degreeOfCondensation(
+      const double carbon_abundance);
+    void saveOutput(const std::string file_path);
   protected:
     const double monomer_radius = 1.28e-8;
     const double const_radius = 0;

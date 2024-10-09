@@ -120,6 +120,18 @@ void RadiationField::angularIntegration()
 }
 
 
+double RadiationField::fluxWeightedExtinction(
+  const std::vector<double>& extinction_coeff)
+{
+  std::vector<double> data = eddington_flux;
+
+  for (size_t i=0; i<data.size(); ++i)
+    data[i] *= extinction_coeff[i];
+
+  return wavelengthIntegration(data)/eddington_flux_int;
+}
+
+
 void RadiationField::wavelengthIntegration()
 {
   eddington_flux_int = wavelengthIntegration(eddington_flux);

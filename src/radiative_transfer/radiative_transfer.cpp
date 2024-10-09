@@ -211,6 +211,7 @@ void RadiativeTransfer::solveRadiativeTransfer()
       for (auto & ip : impact_parameter_grid)
         ip.solveRadiativeTransfer(
           i,
+          config->use_spline_discretisation,
           boundary_planck_derivative[i],
           boundary_flux_correction,
           extinction_coeff[i],

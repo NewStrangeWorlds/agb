@@ -54,6 +54,7 @@ class ImpactParam{
 
     void solveRadiativeTransfer(
       const size_t nu,
+      const bool use_spline_discretisation,
       const double boundary_planck_derivative,
       const double boundary_flux_correction,
       const std::vector<double>& extinction_coeff,
@@ -123,6 +124,8 @@ struct RadiationField
   void angularIntegration();
   void wavelengthIntegration();
   double wavelengthIntegration(const std::vector<double>& data);
+  double fluxWeightedExtinction(
+    const std::vector<double>& extinction_coeff);
 };
 
 

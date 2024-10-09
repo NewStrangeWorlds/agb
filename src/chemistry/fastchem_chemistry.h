@@ -15,13 +15,20 @@ namespace agb {
 
 class FastChemChemistry{
   public:
-    FastChemChemistry(const std::string& fastchen_parameter_file);
+    FastChemChemistry(
+      const std::string& fastchen_parameter_file,
+      const double metallicity,
+      const double c_o_ratio);
     ~FastChemChemistry() {}
-    
+
+    std::vector<double> element_abundances;
+    std::vector<size_t> fastchem_species_indices;
+
     void calcChemicalComposition(
       const std::vector<double>& parameters,
       const std::vector<double>& temperature,
       const std::vector<double>& pressure,
+      const std::vector<double>& degree_of_condensation_c,
       std::vector<std::vector<double>>& number_densities,
       std::vector<double>& mean_molecular_weight,
       std::vector<double>& total_element_density,
@@ -31,7 +38,6 @@ class FastChemChemistry{
 
     std::vector<chemical_species_id> species;
     std::vector<double> reference_element_abundances;
-    std::vector<size_t> fastchem_species_indices;
 };
 
 

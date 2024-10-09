@@ -16,6 +16,7 @@
 #include "../dust/dust_species.h"
 #include "../dust/analytic_dust.h"
 #include "../dust/gail_sedlmayr_dust.h"
+#include "../hydrodynamics/hydrodynamics.h"
 
 
 
@@ -38,13 +39,24 @@ class AGBStarModel{
     TransportCoefficients transport_coeff;
     RadiativeTransfer radiative_transfer;
     TemperatureCorrection temperature_correction;
+    Hydrodynamics hydrodynamics;
   protected:
     bool temperatureIteration();
+    bool chemistryDustIteration();
+    bool chemistryHydroIteration();
+    void radiativeTransfer();
     std::pair<double, size_t> checkFluxConvergence();
+    std::pair<double, size_t> checkConvergence(
+      const std::vector<double>& old_data,
+      const std::vector<double>& new_data);
     std::pair<double, size_t> checkEnergyBalance(
       std::vector<double>& temperature,
       std::vector<std::vector<double>>& absorption__coeff,
       std::vector<double>& deviation);
+    std::pair<double, size_t> checkTemperatureConvergence(
+      const std::vector<double>& temperature,
+      const std::vector<double>& temperature_old,
+      std::vector<double>& change);
     void forceMonotonicProfile(std::vector<double>& data);
     void smoothProfile(std::vector<double>& data);
 };

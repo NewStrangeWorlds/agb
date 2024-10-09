@@ -75,6 +75,14 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::getline(file, line);
   std::getline(file, line);
 
+  file >> stellar_mass_loss_rate;
+  std::cout << "- dM/dt*: " << stellar_mass_loss_rate << "\n";
+  stellar_mass_loss_rate *= constants::mass_sun / constants::year;
+  
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+
   file >> c_o_ratio;
   std::cout << "- C/O: " << c_o_ratio << "\n";
 
@@ -108,20 +116,37 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::getline(file, line);
   std::getline(file, line);
   std::getline(file, line);
+  file >> input;
+  std::cout << input << "\n";
+  if (input == "yes" || input == "Yes" || input == "y" || input == "Y")
+    use_spline_discretisation = true;
+  else
+    use_spline_discretisation = false;
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
   file >> nb_temperature_iter >> temperature_convergence >> temperature_max_change;
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+  file >> nb_hydrodynamics_iter >> hydrodynamics_convergence; 
   
   std::cout << "- max radiative transfer iterations: " << nb_radiative_transfer_iter << "\n";
   std::cout << "- radiative transfer convergence criterion: " << radiative_transfer_convergence << "\n";
+  std::cout << "- radiative transfer use spline discretisation: " << use_spline_discretisation << "\n";
   std::cout << "- max temperature iterations: " << nb_temperature_iter << "\n";
   std::cout << "- temperature convergence criterion: " << temperature_convergence << "\n";
   std::cout << "- max relative temperature change: " << temperature_max_change << "\n";
-
+  std::cout << "- max hydrodynamics iterations: " << nb_hydrodynamics_iter << "\n";
+  std::cout << "- hydrodynamics convergence criterion: " << hydrodynamics_convergence << "\n";
 
   std::getline(file, line);
   std::getline(file, line);
   std::getline(file, line);
   file >> input;
-
+  
   if (input == "yes" || input == "Yes" || input == "y" || input == "Y")
     smooth_temperature_profile = true;
   else
@@ -269,6 +294,32 @@ bool ModelConfig::loadOutputConfigFile(const std::string folder_path)
     output_spectrum_path = "";
   else
     output_spectrum_path = model_folder + output_spectrum_path;
+
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+
+  file >> output_dust_path;
+  std::cout << "- output dust to: " << output_dust_path << "\n";
+  
+  if (output_dust_path == "None" || output_dust_path == "none")
+    output_dust_path = "";
+  else
+    output_dust_path = model_folder + output_dust_path;
+
+  std::getline(file, line);
+  std::getline(file, line);
+  std::getline(file, line);
+
+  file >> output_hydro_path;
+  std::cout << "- output hydrodynamic to: " << output_hydro_path << "\n";
+  
+  if (output_hydro_path == "None" || output_hydro_path == "none")
+    output_hydro_path = "";
+  else
+    output_hydro_path = model_folder + output_hydro_path;
+
 
   std::cout << "\n";
 

@@ -117,11 +117,16 @@ void DustSpecies::calcTransportCoefficients(
 
   absorption_coeff.assign(nb_spectral_points, 0.);
   scattering_coeff.assign(nb_spectral_points, 0.);
-
+  
+  //if there is too little dust, we skip the calculationj
   //if (number_density[radius_idx] < 1e-40) return;
+  
+  double a = particle_radius[radius_idx][0];
+
+  if (a > 1e-4) a = 1e-4;
 
   opticalProperties(
-    particle_radius[radius_idx][0], 
+    a, 
     absorption_efficiency, 
     scattering_efficiency, 
     asymmetry_parameter);
@@ -129,10 +134,10 @@ void DustSpecies::calcTransportCoefficients(
 
   for (size_t i=0; i<nb_spectral_points; ++i)
   {
-    absorption_coeff[i] = constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
+    absorption_coeff[i] = constants::pi * a*a
                           * absorption_efficiency[i]
                           * number_density[radius_idx];
-    scattering_coeff[i] = constants::pi * particle_radius[radius_idx][0]*particle_radius[radius_idx][0] 
+    scattering_coeff[i] = constants::pi *a*a
                           * scattering_efficiency[i]
                           * number_density[radius_idx];
   }
@@ -152,11 +157,11 @@ void DustSpecies::opticalProperties(
   scattering_efficiency.assign(nb_spectral_points, 0.);
   asymmetry_parameter.assign(nb_spectral_points, 0.);
 
-
+  #pragma omp parallel for schedule(dynamic, 1)
   for (size_t i=0; i<nb_spectral_points; ++i)
   {
     const double size_parameter = 2. * constants::pi * radius/spectral_grid->wavelength_list_cm[i];
-    
+
     double qext;
 
     lxmie::Mie(

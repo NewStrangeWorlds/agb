@@ -16,6 +16,7 @@ constexpr double gravitation_const = 6.673e-8;                  //Gravitational 
 constexpr double amu = 1.6605e-24;                              //atomic mass unit
 constexpr double atomic_weight_c = 12.01;                       //atomic weight of carbon
 constexpr double gas_constant = 8.314472e7;                     //universal gas constant erg K^-1 mol^-1
+constexpr double year = 3.15569e7;                              //year in seconds
 
 //additional constants
 constexpr double radius_earth = 6.37123e8;                      //mean Earth radius in cm

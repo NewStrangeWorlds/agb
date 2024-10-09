@@ -199,6 +199,7 @@ void ImpactParam::assembleSystemSpline(
 //for a given spectral index nu
 void ImpactParam::solveRadiativeTransfer(
   const size_t nu,
+  const bool use_spline_discretisation,
   const double boundary_planck_derivative,
   const double boundary_flux_correction,
   const std::vector<double>& extinction_coeff,
@@ -225,15 +226,25 @@ void ImpactParam::solveRadiativeTransfer(
 
   aux::TriDiagonalMatrix M(nb_z_points);
   std::vector<double> rhs(nb_z_points, 0.);
-
-  assembleSystemSpline(
-    optical_depth,
-    source_function_z,
-    boundary_planck_derivative,
-    boundary_flux_correction,
-    extinction_coeff[0],
-    M,
-    rhs);
+  
+  if (use_spline_discretisation)
+   assembleSystemSpline(
+      optical_depth,
+      source_function_z,
+      boundary_planck_derivative,
+      boundary_flux_correction,
+      extinction_coeff[0],
+      M,
+      rhs);
+  else
+    assembleSystemTaylor(
+      optical_depth,
+      source_function_z,
+      boundary_planck_derivative,
+      boundary_flux_correction,
+      extinction_coeff[0],
+      M,
+      rhs);
 
   std::vector<double> u = M.solve(rhs);
 
