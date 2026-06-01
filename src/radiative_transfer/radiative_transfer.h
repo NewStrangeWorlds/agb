@@ -178,8 +178,8 @@ class RadiativeTransfer{
       const double boundary_planck_derivative,
       const double boundary_flux_correction);
     std::vector<double> generateXGrid(
-      const std::vector<double>& radius,
       const std::vector<double>& extinction_coeff,
+      const std::vector<double>& radius,
       const std::vector<double>& sphericality_factor);
     void assembleMomentSystemSpline(
       const std::vector<double>& x_grid,

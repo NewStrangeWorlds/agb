@@ -5,5 +5,9 @@ agb_wind
 build/*
 CMakeFiles/*
 .vscode/
+cppad-install/*
+1/*
 
 _deps/*
+IRC10216/*
+IRC10216_1/*

@@ -9,14 +9,16 @@
 #include "../additional/quadrature.h"
 #include "../additional/physical_const.h"
 #include "../radiative_transfer/radiative_transfer.h"
+#include "structure_solver.h"
 
 #include <algorithm>
 #include <vector>
 #include <omp.h>
-#include <math.h> 
+#include <math.h>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <cstdlib>
 
 
 namespace agb {
@@ -75,25 +77,162 @@ void Hydrodynamics::calcWindVelocity()
     flux_weighted_extinction[i] = radiation_field[i].fluxWeightedExtinction(atmosphere->extinction_coeff[i]);
   
   calcAlpha(flux_weighted_extinction);
-  
+
   sound_speed_derivative = soundSpeedDerivative();
+
   int critical_point = findCriticalPoint();
+
+  //a valid transonic wind solution requires the critical point to lie in the
+  //interior. If the search hit a boundary (e.g. a transiently super-Eddington
+  //alpha during the iteration), the wind equation has no transonic solution and
+  //calcPhi/windVelocity would produce a (super-luminal) garbage velocity. Keep
+  //the previous structure for this step instead of poisoning the iteration.
+  if (critical_point <= 0 || critical_point >= static_cast<int>(nb_grid_points) - 1)
+  {
+    std::cout << "Hydrodynamics: no interior critical point (index " << critical_point
+              << ") - skipping velocity/density update this iteration\n";
+    return;
+  }
 
   phi = calcPhi(critical_point);
 
   std::vector<double> wind_velocity = windVelocity(phi, critical_point);
 
-  mass_loss_rate = calcMassLossRate(
-    critical_point, 
-    sound_speed_derivative[critical_point], 
-    flux_weighted_extinction[critical_point]) / constants::mass_sun * constants::year;
+  //Eigenvalue mass-loss rate implied by the critical-point regularity condition.
+  //In Winters (1994) this would be the quantity used to fix the stellar radius.
+  const double mass_loss_rate_eigenvalue = calcMassLossRate(
+    critical_point,
+    sound_speed_derivative[critical_point],
+    flux_weighted_extinction[critical_point]);
+
+  //Henyey path (HENYEY_SOLVE=1): predict the mass-loss rate self-consistently as a
+  //transonic eigenvalue (Setup A). Seed Mdot from the shooting estimate above
+  //(validated to converge) and warm-start Phi from the previous solve.
+  if (std::getenv("HENYEY_SOLVE"))
+  {
+    solveStructureHenyey(flux_weighted_extinction, mass_loss_rate_eigenvalue);
+    return;
+  }
+
+  //--- validation hook (set HENYEY_CHECK=1): on the FIRST call (converged RT,
+  //physical chi_F), cross-check the CppAD Henyey eigenvalue solver against
+  //calcPhi/calcMassLossRate on the real (chi_F, c_T) snapshot, WITHOUT modifying
+  //the structure. The wind velocity is seeded from a transonic guess based on the
+  //real sound speed (independent of the shooting solution); dust is decoupled so
+  //this isolates the wind + Mdot eigenvalue.
+  static bool henyey_check_done = false;
+
+  bool chi_f_finite = true;
+  for (const double x : flux_weighted_extinction)
+    if (!std::isfinite(x)) chi_f_finite = false;
+
+  if (std::getenv("HENYEY_CHECK") && !henyey_check_done
+      && mass_loss_rate_eigenvalue > 0. && chi_f_finite)
+  {
+    henyey_check_done = true;
+
+    StructureSolver solver(nb_grid_points);
+
+    for (size_t i=0; i<nb_grid_points; ++i)
+    {
+      solver.radius[i] = atmosphere->radius[i];
+      solver.sound_speed[i] = isothermal_sound_speed[i];
+      solver.flux_mean_extinction[i] = flux_weighted_extinction[i];
+      solver.nucleation_per_h[i] = 0.;          //decouple dust for the wind check
+      solver.growth_timescale[i] = 1.;
+    }
+    solver.sound_speed2_deriv = sound_speed_derivative;  //d(c_T^2)/dr
+    solver.stellar_luminosity = config->stellar_luminosity;
+    solver.gravitational_mass = constants::gravitation_const * config->stellar_mass;
+    solver.inner_velocity = 0.3 * isothermal_sound_speed[0];
+
+    const size_t M = nb_grid_points;
+    const size_t N = (1 + StructureSolver::nb_moments)*M + 1;
+
+    //transonic seed based on the real sound speed (sub-sonic base -> super-sonic)
+    std::vector<double> x(N, 0.);
+    for (size_t i=0; i<M; ++i)
+    {
+      const double frac = 0.3 + 1.5*double(i)/double(M);
+      const double v = frac * isothermal_sound_speed[i];
+      x[i] = 0.5*(v + isothermal_sound_speed[i]*isothermal_sound_speed[i]/v);
+    }
+    x[(1 + StructureSolver::nb_moments)*M] = std::log(mass_loss_rate_eigenvalue);
+
+    double final_res = 0.; int iters = 0;
+    const std::vector<double> sol = solver.solveEigen(x, 300, 1e-8, &final_res, &iters);
+    const double mdot_eigen = std::exp(sol[(1 + StructureSolver::nb_moments)*M]);
+
+    std::cout << "[HENYEY_CHECK] solve rel-residual " << final_res << " in " << iters
+              << " iters; critical point " << solver.critical_point << "/" << M << "\n"
+              << "[HENYEY_CHECK] Mdot eigen " << mdot_eigen
+              << " g/s  vs calcMassLossRate " << mass_loss_rate_eigenvalue
+              << " g/s  (ratio " << mdot_eigen/mass_loss_rate_eigenvalue << ")\n";
+  }
+
+  //EXPERIMENT (Winters 1994): prescribe Mdot as a fixed model parameter and feed it
+  //into the continuity equation, instead of deriving it from the critical point.
+  //With the radius grid (hence R*) also fixed this formally over-constrains the
+  //system; the eigenvalue/fixed ratio printed below measures the inconsistency
+  //(how far the critical point is from being regular for this prescribed Mdot).
+  const double mass_loss_rate_cgs = config->stellar_mass_loss_rate;
+
+  //store the mass loss rate in solar masses per year for output/diagnostics
+  mass_loss_rate = mass_loss_rate_cgs / constants::mass_sun * constants::year;
 
 
-  const double max_change = 1e-2;
+  //Under-relaxation of the velocity update. Via mass conservation the radiative
+  //acceleration alpha ~ chi_F/rho ~ chi_F * v / Mdot, so an unrelaxed velocity is
+  //an undamped feedback channel: when dust forms, alpha can jump from ~0 to >1 in
+  //a single step and run away. We relax in log space (v spans many orders of
+  //magnitude).
+  //
+  //The relaxation factor is adapted from the trend of the (log) residual between
+  //the proposed and current velocity: when the residual shrinks the iteration is
+  //converging and we accelerate (larger factor); when it grows we are in the
+  //unstable transient and damp harder. This keeps the early dust-ignition step
+  //stable while letting the late, near-converged steps move quickly.
+  const double relaxation_min = 0.1;
+  const double relaxation_max = 0.9;
 
-  atmosphere->velocity = wind_velocity;
+  double velocity_residual = 0.;
 
-  std::vector<double> mass_density = massDensity(mass_loss_rate);
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    const double v_new = wind_velocity[i];
+
+    if (std::isfinite(v_new) && v_new > 0.)
+      velocity_residual = std::max(
+        velocity_residual,
+        std::abs(std::log(v_new / atmosphere->velocity[i])));
+  }
+
+  if (prev_velocity_residual > 0.)
+  {
+    if (velocity_residual < prev_velocity_residual)
+      velocity_relaxation = std::min(relaxation_max, velocity_relaxation * 1.3);
+    else
+      velocity_relaxation = std::max(relaxation_min, velocity_relaxation * 0.5);
+  }
+
+  prev_velocity_residual = velocity_residual;
+
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    const double v_new = wind_velocity[i];
+
+    //keep the previous velocity for any point with a degenerate/invalid update
+    if (std::isfinite(v_new) && v_new > 0.)
+      atmosphere->velocity[i] = std::pow(atmosphere->velocity[i], 1. - velocity_relaxation)
+                              * std::pow(v_new, velocity_relaxation);
+  }
+
+  std::cout << "Velocity relaxation factor: " << velocity_relaxation
+            << "  (residual " << velocity_residual << ")\n";
+
+  //the density follows from mass conservation (using the relaxed velocity) and
+  //needs the CGS (g/s) mass loss rate
+  std::vector<double> mass_density = massDensity(mass_loss_rate_cgs);
 
   // for (size_t i=0; i<mass_density.size(); ++i)
   // { 
@@ -111,25 +250,178 @@ void Hydrodynamics::calcWindVelocity()
 
   //atmosphere->mass_density = mass_density;
 
-  for (size_t i=0; i<nb_grid_points; ++i)
-    atmosphere->mass_density[i] = std::sqrt(mass_density[i] * atmosphere->mass_density[i]);
+  // for (size_t i=0; i<nb_grid_points; ++i)
+  //   atmosphere->mass_density[i] = std::sqrt(mass_density[i] * atmosphere->mass_density[i]);
 
-  for (size_t i=0; i<nb_grid_points; ++i)
-  {
-    std::cout << i << "  " 
-              << atmosphere->velocity[i] << "\t" 
-              << isothermal_sound_speed[i] << "\t" 
-              << alpha[i] << "\t" 
-              << phi[i] << "\t" 
-              << wind_velocity[i] << "\t"
-              << mass_density[i] << "\t"
-              << atmosphere->mass_density[i] << "\n";
-  }
-  
+  // for (size_t i=0; i<nb_grid_points; ++i)
+  // {
+  //   std::cout << i << "  " 
+  //             << atmosphere->velocity[i] << "\t" 
+  //             << isothermal_sound_speed[i] << "\t" 
+  //             << alpha[i] << "\t" 
+  //             << radiation_field[i].flux_int << "\t"
+  //             << phi[i] << "\t" 
+  //             << wind_velocity[i] << "\t"
+  //             << mass_density[i] << "\t"
+  //             << atmosphere->mass_density[i] << "\n";
+  // }
+
+  // for (size_t i=0; i<nb_grid_points; ++i)
+  // {
+  //   size_t j= 342;
+  //   //for (size_t j=0; j<radiation_field[i].eddington_flux.size(); ++j)
+  //   {
+  //     std::cout << i << "  "  << j << "  " << "\t" << atmosphere->radius_grid[i]  << "\t" << radiation_field[i].eddington_flux[j] << "\t" << radiation_field[i].eddington_flux_impact[j] << "\t" << radiation_field[i].flux[j] << "\t" << radiation_field[i].mean_intensity[j] << "\t" << radiation_field[i].eddington_factor[j] << "\n";
+  //   }
+  // }
+  // exit(0);
   std::cout << "Critical point: " << critical_point << "\n";
-  std::cout << "Mass loss rate: " << mass_loss_rate << "\n";
+  std::cout << "Mass loss rate (fixed): " << mass_loss_rate
+            << "  eigenvalue: " << mass_loss_rate_eigenvalue / constants::mass_sun * constants::year
+            << "  eigenvalue/fixed: " << mass_loss_rate_eigenvalue / mass_loss_rate_cgs << "\n";
 }
 
+
+
+bool Hydrodynamics::solveStructureHenyey(
+  const std::vector<double>& flux_weighted_extinction,
+  const double seed_mass_loss_rate)
+{
+  const size_t M = nb_grid_points;
+  const size_t s_idx = (1 + StructureSolver::nb_moments)*M;
+  const size_t N = s_idx + 1;
+
+  //reject if the (RT-derived) flux-mean extinction is not usable
+  for (const double x : flux_weighted_extinction)
+    if (!std::isfinite(x) || x < 0.)
+    {
+      std::cout << "Henyey solve skipped (non-finite flux-mean extinction)"
+                   " - keeping previous structure\n";
+      return false;
+    }
+
+  //Damp the change of the flux-mean extinction (hence the radiative acceleration
+  //alpha) between outer iterations, in log space. alpha sets where the wind-equation
+  //numerator N=0, i.e. the sonic radius r_c; an unrelaxed alpha makes r_c jump
+  //dramatically between iterations. Relaxing alpha lets r_c migrate smoothly while
+  //the critical point stays FREE (relocated each Newton step to where Phi is
+  //minimal, consistent with dPhi/dr=0). This is Winters' "damping factors applied
+  //to the radiative-acceleration corrections".
+  const double w_chi = 0.1;
+  std::vector<double> chi_used(M);
+  for (size_t i=0; i<M; ++i)
+  {
+    const double chi_new = flux_weighted_extinction[i];
+    chi_used[i] = (henyey_chi_prev.size()==M && henyey_chi_prev[i] > 0. && chi_new > 0.)
+      ? std::pow(henyey_chi_prev[i], 1.-w_chi) * std::pow(chi_new, w_chi)
+      : chi_new;
+  }
+  henyey_chi_prev = chi_used;
+
+  StructureSolver solver(M);
+  for (size_t i=0; i<M; ++i)
+  {
+    solver.radius[i] = atmosphere->radius[i];
+    solver.sound_speed[i] = isothermal_sound_speed[i];
+    solver.flux_mean_extinction[i] = chi_used[i];
+    solver.nucleation_per_h[i] = 0.;   //dust decoupled: its opacity enters via chi_F
+    solver.growth_timescale[i] = 1.;
+  }
+  solver.sound_speed2_deriv = sound_speed_derivative;
+  solver.stellar_luminosity = config->stellar_luminosity;
+  solver.gravitational_mass = constants::gravitation_const * config->stellar_mass;
+
+  //inner-velocity boundary condition fixed at the PHYSICAL base velocity (from the
+  //current structure), not an arbitrary fraction of c_T. A too-high inner velocity
+  //gives a too-low base density (rho = Mdot/4pi r^2 v) and starves the dust driving.
+  solver.inner_velocity = std::max(atmosphere->velocity[0], 1.0);
+
+  //Setup B (Winters, HENYEY_FIX_MDOT=1): prescribe Mdot at the config value rather
+  //than solving for it as the (collapse-prone) transonic eigenvalue. The inner BC
+  //and Mdot are both fixed; the regularity is not imposed (the structure is the
+  //forward solution of the wind equation for the prescribed Mdot).
+  double seed_mdot = seed_mass_loss_rate;
+  if (std::getenv("HENYEY_FIX_MDOT"))
+  {
+    solver.fix_mass_loss_rate = true;
+    solver.log_mass_loss_rate_target = std::log(config->stellar_mass_loss_rate);
+    seed_mdot = config->stellar_mass_loss_rate;
+  }
+
+  //seed: warm-start from the previous solve, else a transonic guess on c_T
+  std::vector<double> x;
+  if (henyey_x_prev.size() == N)
+    x = henyey_x_prev;
+  else
+  {
+    x.assign(N, 0.);
+    for (size_t i=0; i<M; ++i)
+    {
+      const double frac = 0.3 + 1.5*double(i)/double(M);
+      const double v = frac * isothermal_sound_speed[i];
+      x[i] = 0.5*(v + isothermal_sound_speed[i]*isothermal_sound_speed[i]/v);
+    }
+    x[s_idx] = std::log(seed_mdot);
+  }
+
+  //Setup A: Mdot as the transonic eigenvalue, critical point FREE (relocated each
+  //Newton step). The chi_F damping above keeps r_c migrating smoothly.
+  //Setup B (fix_mass_loss_rate): Mdot pinned, regularity not imposed.
+  const int max_newton = 300;
+  double res = 0.; int iters = 0;
+  x = solver.solveEigen(x, max_newton, 1e-8, &res, &iters);
+
+  const double mdot_cgs = std::exp(x[s_idx]);
+  const int cp = solver.critical_point;
+
+  //reject a non-converged or degenerate solve (iteration cap, boundary critical
+  //point, or non-finite Mdot): keep the last good structure and do not warm-start
+  //from this x, so a diverged solve cannot poison the next iteration.
+  if (iters >= max_newton || !std::isfinite(mdot_cgs) || mdot_cgs <= 0.
+      || cp <= 0 || cp >= static_cast<int>(M)-1)
+  {
+    std::cout << "Henyey solve rejected (iters=" << iters << ", cp=" << cp
+              << ", Mdot=" << mdot_cgs << ") - keeping previous structure\n";
+    return false;
+  }
+
+  const std::vector<double> v = solver.velocityProfile(x);
+
+  //Under-relax the structure write-back (log space). The mass-loss eigenvalue is
+  //a steep function of the structure (dust-driving feedback), so an unrelaxed
+  //Mdot collapses/explodes across outer iterations -- this is exactly why
+  //Winters/Dominik fix Mdot. Damping the coupling keeps Setup A (predicted Mdot)
+  //stable. The per-solve Newton is unaffected (it solves at frozen chi_F).
+  const double w = 0.3;
+
+  const double mdot_old = mass_loss_rate * constants::mass_sun / constants::year;  //CGS, prev step
+  const double mdot_rel = (mdot_old > 0.)
+    ? std::pow(mdot_old, 1.-w) * std::pow(mdot_cgs, w) : mdot_cgs;
+
+  for (size_t i=0; i<M; ++i)
+  {
+    const double v_old = atmosphere->velocity[i];
+    const double v_rel = (v_old > 0. && std::isfinite(v[i]) && v[i] > 0.)
+      ? std::pow(v_old, 1.-w) * std::pow(v[i], w) : v[i];
+
+    atmosphere->velocity[i] = v_rel;
+    atmosphere->mass_density[i] = mdot_rel
+      / (4.*constants::pi * atmosphere->radius[i]*atmosphere->radius[i] * v_rel);
+  }
+
+  mass_loss_rate = mdot_rel / constants::mass_sun * constants::year;
+  henyey_x_prev = x;
+
+  //raw eigenvalue Mdot (what the solve wants) vs the relaxed value actually used;
+  //the raw/relaxed ratio approaching 1 signals a converged outer fixed point
+  const double mdot_raw_msunyr = mdot_cgs / constants::mass_sun * constants::year;
+  std::cout << "Henyey structure solve: rel-residual " << res << " in " << iters
+            << " iters; critical point " << cp << "/" << M
+            << "; Mdot raw " << mdot_raw_msunyr << " relaxed " << mass_loss_rate
+            << " Msun/yr (raw/relaxed " << mdot_raw_msunyr/mass_loss_rate << ")\n";
+
+  return true;
+}
 
 
 void Hydrodynamics::speedOfSound()
@@ -163,10 +455,17 @@ std::vector<double> Hydrodynamics::windVelocity(
   std::vector<double> wind_velocity(nb_grid_points, 0);
 
   for (size_t i=0; i<critical_point; ++i)
-    wind_velocity[i] = phi[i] - std::sqrt(phi[i]*phi[i] - isothermal_sound_speed[i] * isothermal_sound_speed[i]);
+  {
+     wind_velocity[i] = phi[i] - std::sqrt(phi[i]*phi[i] - isothermal_sound_speed[i] * isothermal_sound_speed[i]);
+    
+    if (i > 0 && wind_velocity[i] < wind_velocity[i-1])
+      wind_velocity[i] = wind_velocity[i-1];
+  }
+   
   
   for (size_t i=critical_point+1; i<nb_grid_points; ++i)
     wind_velocity[i] = phi[i] + std::sqrt(phi[i]*phi[i] - isothermal_sound_speed[i] * isothermal_sound_speed[i]);
+
   
   //to make the transition between the upward and downward branch smooth
   //we interpolate the wind velocity at the critical point between the two end points
@@ -188,6 +487,8 @@ void Hydrodynamics::integratePhiOutward(
   const double start_velocity,
   std::vector<double>& phi)
 { 
+  std::vector<double> vel (nb_grid_points, 0);
+
   double v = start_velocity;
   phi[0] = 0.5 * (v + isothermal_sound_speed[0]*isothermal_sound_speed[0]/v);
 
@@ -231,7 +532,7 @@ void Hydrodynamics::integratePhiInward(
              / v/r;
 
     phi[i] = phi[i+1] - (r - atmosphere->radius[i]) * phi_deriv;
-    
+
     v = phi[i] + std::sqrt(phi[i]*phi[i] - isothermal_sound_speed[i]*isothermal_sound_speed[i]);
   }
 
@@ -271,7 +572,7 @@ std::vector<double> Hydrodynamics::calcPhi(const int critical_point)
   //now we solve phi from the outer boundary to the critical point
   //we use a shooting method to find the correct velocity at outer boundary
   v_0 = isothermal_sound_speed[critical_point];
-  v_1 = isothermal_sound_speed[critical_point] * 100;
+  v_1 = isothermal_sound_speed[critical_point] * 100000;
 
   for (int it=0; it<1000; ++it)
   {
@@ -288,7 +589,7 @@ std::vector<double> Hydrodynamics::calcPhi(const int critical_point)
        else
         v_1 = v_start;
     }
-
+    
     if (std::abs(v_1 - v_0)/v_1 < 1e-5  && !std::isnan(phi[critical_point]))
       break;
   }
@@ -310,7 +611,8 @@ int Hydrodynamics::findCriticalPoint()
     phi_deriv[i] = constants::gravitation_const * config->stellar_mass 
                                 / (atmosphere->radius[i]*atmosphere->radius[i])
                                 * (1. - alpha[i])
-                                - 2 * isothermal_sound_speed[i] * isothermal_sound_speed[i]/atmosphere->radius[i];
+                                - 2 * isothermal_sound_speed[i] * isothermal_sound_speed[i]/atmosphere->radius[i]
+                                + sound_speed_derivative[i];
   }
 
   int i = 0;
@@ -348,20 +650,23 @@ double Hydrodynamics::calcMassLossRate(
   const double radius = atmosphere->radius[critical_point];
   const double sound_speed = isothermal_sound_speed[critical_point];
  
+  //the denominator is the critical-point regularity condition (= G M / r_c^2 * alpha),
+  //and must use the same sign for the sound-speed derivative term as findCriticalPoint:
+  //  G M / r^2 (1 - alpha) - 2 c_T^2 / r + d(c_T^2)/dr = 0
   double mass_loss_rate = config->stellar_luminosity * flux_weighted_extinction * sound_speed / constants::light_c
-                          * 1./(constants::gravitation_const * config->stellar_mass/radius/radius 
-                                - 2*sound_speed*sound_speed/radius - sound_speed_derivative);
+                          * 1./(constants::gravitation_const * config->stellar_mass/radius/radius
+                                - 2*sound_speed*sound_speed/radius + sound_speed_derivative);
 
   return mass_loss_rate;
 }
 
 
 std::vector<double> Hydrodynamics::massDensity(
-  const double mass_loss_rate1)
+  const double mass_loss_rate)
 {
   std::vector<double> mass_density(nb_grid_points, 0);
 
-  const double mass_loss_rate = config->stellar_mass_loss_rate;
+  //const double mass_loss_rate = config->stellar_mass_loss_rate;
   
   for (size_t i=0; i<nb_grid_points; ++i)
     mass_density[i] = mass_loss_rate 

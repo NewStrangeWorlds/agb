@@ -8,8 +8,8 @@
 
 namespace agb{
 
-enum chemical_species_id {_TOTAL, _H, _He, _C, _O, _Fe, _Fep, _Ca, _Ti, _Tip, _H2, _H2O, _CO2, _CO, _CH4, _HCN, _NH3, _C2H2, _N2, _Na, _K, _H2S, _Hm, _TiO, _VO, _FeH
-                          , _SH, _MgO, _AlO, _CaO, _CrH, _MgH, _CaH, _TiH, _OH, _e, _V, _Vp, _Mn, _Si, _Cr, _Crp, _SiO, _SiO2, _SO2, _e_m, _CH, _C2, _C2H, _CN};
+enum chemical_species_id {_TOTAL, _e_m, _H, _Hm, _He, _C, _O, _N, _Na, _Si, _K, _Ca, _Ti, _Tip, _V, _Vp, _Cr, _Crp, _Mn, _Fe, _Fep, _H2, _H2O, _CO2, _CO, _CH4, _HCN, _NH3, _C2H2, _N2, _H2S, _TiO, _VO, _FeH
+                          , _SH, _MgO, _AlO, _CaO, _CrH, _MgH, _CaH, _TiH, _OH, _SiO, _SiO2, _SO2, _CH, _C2, _C2H, _CN, _CS, _SiS};
 
 
 struct chemistry_data{
@@ -24,15 +24,26 @@ struct chemistry_data{
 namespace constants{
 
 const std::vector<chemistry_data> species_data{ {_TOTAL, "Total", "Total",  0.0},
+                                                {_e_m,   "e-",    "e-",     5.4857990907e-4},
                                                 {_H,     "H",     "H",      1.00784},
+                                                {_Hm,    "H-",    "H1-",    1.00784},
                                                 {_He,    "He",    "He",     4.002602},
                                                 {_C,     "C",     "C",      12.0107},
                                                 {_O,     "O",     "O",      15.999},
-                                                {_Fe,    "Fe",    "Fe",     55.845},
-                                                {_Fep,   "Fe+",   "Fe+",    55.845},
+                                                {_N,     "N",     "N",      14.0067},
+                                                {_Na,    "Na",    "Na",     22.98977},
+                                                {_Si,    "Si",    "Si",     28.085},
+                                                {_K,     "K",     "K",      39.0983},
                                                 {_Ca,    "Ca",    "Ca",     40.078},
                                                 {_Ti,    "Ti",    "Ti",     47.867},
-                                                {_Tip,   "Ti+",   "Ti+",    47.867},
+                                                {_Tip,   "Ti+",   "Ti1+",   47.867},
+                                                {_V,     "V",     "V",      50.9415},
+                                                {_Vp,    "V+",    "V1+",    50.9415},
+                                                {_Cr,    "Cr",    "Cr",     51.996},
+                                                {_Crp,   "Cr+",   "Cr1+",   51.996},
+                                                {_Mn,    "Mn",    "Mn",     54.938044},
+                                                {_Fe,    "Fe",    "Fe",     55.845},
+                                                {_Fep,   "Fe+",   "Fe1+",   55.845},
                                                 {_H2,    "H2",    "H2",     2.01588},
                                                 {_H2O,   "H2O",   "H2O1",   18.01528},
                                                 {_CO2,   "CO2",   "C1O2",   44.01},
@@ -42,13 +53,10 @@ const std::vector<chemistry_data> species_data{ {_TOTAL, "Total", "Total",  0.0}
                                                 {_NH3,   "NH3",   "H3N1",   17.03052},
                                                 {_C2H2,  "C2H2",  "C2H2",   26.04},
                                                 {_N2,    "N2",    "N2",     28.0134},
-                                                {_Na,    "Na",    "Na",     22.98977},
-                                                {_K,     "K",     "K",      39.0983},
                                                 {_H2S,   "H2S",   "H2S1",   34.09099},
-                                                {_Hm,    "H-",    "H1-",    1.00784},
                                                 {_TiO,   "TiO",   "O1Ti1",  63.8664},
                                                 {_VO,    "VO",    "O1V1",   66.9409},
-                                                {_FeH,   "FeH",   "H1Fe1",  56.853},
+                                                {_FeH,   "FeH",   "Fe1H1",  56.853},  
                                                 {_SH,    "SH",    "H1S1",   34.08},
                                                 {_MgO,   "MgO",   "Mg1O1",  40.3044}, 
                                                 {_AlO,   "AlO",   "Al1O1",  42.981}, 
@@ -58,21 +66,15 @@ const std::vector<chemistry_data> species_data{ {_TOTAL, "Total", "Total",  0.0}
                                                 {_CaH,   "CaH",   "Ca1H1",  41.0859},
                                                 {_TiH,   "TiH",   "H1Ti1",  48.87484},
                                                 {_OH,    "OH",    "H1O1",   17.008},
-                                                {_e,     "e-",    "e-",     5.4857990907e-4},
-                                                {_V,     "V",     "V",      50.9415},
-                                                {_Vp,    "V+",    "V1+",    50.9415},
-                                                {_Mn,    "Mn",    "Mn",     54.938044},
-                                                {_Si,    "Si",    "Si",     28.085},
-                                                {_Cr,    "Cr",    "Cr",     51.996},
-                                                {_Crp,   "Cr+",   "Cr1+",   51.996},
                                                 {_SiO,   "SiO",   "O1Si1",  44.08},
                                                 {_SiO2,  "SiO2",  "O2Si1",  60.08},
                                                 {_SO2,   "SO2",   "O2S1",   64.066},
-                                                {_e_m,   "e-",    "e-",     5.4857990907e-4},
                                                 {_CH,    "CH",    "C1H1",   13.01864},
                                                 {_C2,    "C2",    "C2",     24.02},
                                                 {_C2H,   "C2H",   "C2H1",   25.029},
-                                                {_CN,    "CN",    "C1N1",   26.0174}
+                                                {_CN,    "CN",    "C1N1",   26.0174},
+                                                {_CS,    "CS",    "C1S1",   44.0076},
+                                                {_SiS,   "SiS",   "S1Si1",  60.1505},
                                               };
 }
 }

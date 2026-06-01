@@ -19,7 +19,7 @@ project(helios-r C CXX)
 
 
 #some C++/C flags
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS "-Wall -pedantic -MMD")
@@ -64,6 +64,7 @@ set(SRC
   src/dust/gail_sedlmayr_dust.cpp
   src/dust/gail_sedlmayr_thermo_functions.cpp
   src/hydrodynamics/hydrodynamics.cpp
+  src/hydrodynamics/structure_solver.cpp
   _deps/lx_mie-src/mie/mie.cpp)
   
 
@@ -106,9 +107,51 @@ endif()
 
 
 
+#download Eigen (header-only) for the linear algebra in the Henyey structure solver
+FetchContent_Declare(
+  eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen
+  GIT_TAG        3.4.0
+)
+
+FetchContent_GetProperties(eigen)
+if (NOT eigen_POPULATED)
+  FetchContent_Populate(eigen)
+endif()
+
+
+
+#build CppAD (provides autodiff for the Henyey structure-solver Jacobian).
+#CppAD's CMake generates configure.hpp and forces CMAKE_INSTALL_PREFIX, so it is
+#built/installed in isolation via ExternalProject rather than add_subdirectory.
+include(ExternalProject)
+set(CPPAD_INSTALL_DIR ${CMAKE_BINARY_DIR}/cppad-install)
+
+ExternalProject_Add(cppad_external
+  GIT_REPOSITORY https://github.com/coin-or/CppAD
+  GIT_TAG        20250000.3
+  GIT_SHALLOW    TRUE
+  UPDATE_DISCONNECTED TRUE
+  CMAKE_ARGS
+    -Dcppad_prefix=${CPPAD_INSTALL_DIR}
+    -Dcppad_testvector=std
+    -DCMAKE_BUILD_TYPE=Release
+  BUILD_BYPRODUCTS ${CPPAD_INSTALL_DIR}/lib/libcppad_lib.so
+)
+
+#the include dir must exist at configure time for target_include_directories
+file(MAKE_DIRECTORY ${CPPAD_INSTALL_DIR}/include)
+
+
+
 # build application
 add_executable(agb_wind ${SRC})
-target_include_directories(agb_wind PUBLIC)
+add_dependencies(agb_wind cppad_external)
+target_include_directories(agb_wind PUBLIC ${CPPAD_INSTALL_DIR}/include ${eigen_SOURCE_DIR})
+
+#cppad_lib is a shared library in a non-standard location; add it to the rpath
+#so the runtime loader finds it (the executable is placed in the source dir)
+set_target_properties(agb_wind PROPERTIES BUILD_RPATH ${CPPAD_INSTALL_DIR}/lib)
 
 #link files for the final helios-r code
-target_link_libraries(agb_wind PUBLIC fastchem_lib OpenMP::OpenMP_CXX)
+target_link_libraries(agb_wind PUBLIC fastchem_lib OpenMP::OpenMP_CXX ${CPPAD_INSTALL_DIR}/lib/libcppad_lib.so)

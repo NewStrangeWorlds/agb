@@ -250,14 +250,14 @@ void ImpactParam::solveRadiativeTransfer(
 
   for (size_t i=0; i<nb_z_points; ++i)
   {
-    //if (u[i] < 1e-45) u[i] = 1e-45;
+    
     if (u[i] < 0)
     {
       for (size_t j=0; j<nb_z_points; ++j)
         std::cout << "od  "<< p << "  " << j << "  " << optical_depth[j] << "\t" << source_function_z[j] << "\t" << u[j] << "\n";
 
       for (size_t j=0; j<source_function.size(); ++j)
-        std::cout << "sf  "<< j << "  " << source_function[j] << "\n";
+        std::cout << "sf  "<< nu << "  " << j << "  " << source_function[j] << "\n";
 
       exit(0);
     }

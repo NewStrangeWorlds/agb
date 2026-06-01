@@ -32,6 +32,10 @@ class Hydrodynamics{
     std::vector<double> alpha;
     double mass_loss_rate = 0;
   private:
+    //adaptive under-relaxation state for the velocity update (see calcWindVelocity)
+    double velocity_relaxation = 0.25;
+    double prev_velocity_residual = -1.;
+
     ModelConfig* config;
     SpectralGrid* spectral_grid;
     Atmosphere* atmosphere;
@@ -40,6 +44,19 @@ class Hydrodynamics{
     const size_t nb_grid_points = 0;
     std::vector<double> sound_speed_derivative;
     std::vector<double> phi;
+
+    //warm-start state for the Henyey structure solver (HENYEY_SOLVE path)
+    std::vector<double> henyey_x_prev;
+    std::vector<double> henyey_chi_prev;  //flux-mean extinction used last solve (for alpha damping)
+
+    //solve the wind structure + mass-loss eigenvalue with the CppAD Henyey
+    //solver (dust decoupled; dust opacity enters via the frozen chi_F) and write
+    //velocity/density/mass_loss_rate back into the atmosphere. Returns false if
+    //the solve was rejected (non-finite / no interior critical point), leaving
+    //the structure unchanged.
+    bool solveStructureHenyey(
+      const std::vector<double>& flux_weighted_extinction,
+      const double seed_mass_loss_rate);
 
     void speedOfSound();
     void calcAlpha(

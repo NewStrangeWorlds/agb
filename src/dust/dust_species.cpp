@@ -120,8 +120,13 @@ void DustSpecies::calcTransportCoefficients(
   
   //if there is too little dust, we skip the calculationj
   //if (number_density[radius_idx] < 1e-40) return;
-  
+
   double a = particle_radius[radius_idx][0];
+
+  //a non-finite or non-positive grain radius (e.g. from a diverged structure)
+  //would produce a NaN/garbage Mie size parameter and make the Mie series length
+  //overflow. Leave the dust opacity at zero for this cell instead of crashing.
+  if (!std::isfinite(a) || a <= 0.) return;
 
   if (a > 1e-4) a = 1e-4;
 

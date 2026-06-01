@@ -279,6 +279,18 @@ void RadiativeTransfer::solveRadiativeTransfer()
   #pragma omp parallel for
   for (size_t i=0; i<nb_grid_points; ++i)
     radiation_field[i].wavelengthIntegration();
+
+  // std::cout << "Radiation field : \n";
+
+  // for (size_t i=0; i<nb_grid_points; ++i)
+  // {
+  //   std::cout << i << "  " 
+  //             << atmosphere->radius[i] << "\t" 
+  //             << radiation_field[i].eddington_flux_int << "\t" 
+  //             << radiation_field[i].flux_int << "\t" 
+  //             << radiation_field[i].mean_intensity_int << "\t" 
+  //             << radiation_field[i].eddington_k_int << "\n";
+  // }
 }
 
 

@@ -66,7 +66,7 @@ void AnalyticDust::calcDistribution()
   for (size_t i=0; i<nb_grid_points; ++i)
   {
     number_density[i] = max_number_density 
-                       / (std::exp((condensation_radius - atmosphere->radius_grid[i])/0.06) + 1.);
+                       / (std::exp((condensation_radius - atmosphere->radius_grid[i])/0.2) + 1.);
     number_density[i] *= atmosphere->total_h_density[i];
   }
 

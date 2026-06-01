@@ -14,8 +14,8 @@ AGBStarModel::AGBStarModel(const std::string folder)
  , spectral_grid(&config)
  , atmosphere(&config, spectral_grid.nbSpectralPoints())
  , chemistry(config.model_folder+config.fastchem_parameter_file, 1.0, config.c_o_ratio)
- , dust_species(new AnalyticDust(&config, &spectral_grid, &atmosphere, 0.1))
- //, dust_species(new GailSedlmayrDust(&config, &spectral_grid, &atmosphere))
+ //, dust_species(new AnalyticDust(&config, &spectral_grid, &atmosphere, 0.05))
+ , dust_species(new GailSedlmayrDust(&config, &spectral_grid, &atmosphere))
  , transport_coeff(&config, &spectral_grid, config.opacity_species_symbol, config.opacity_species_folder)
  , radiative_transfer(&config, &spectral_grid, &atmosphere)
  , temperature_correction(&config, &spectral_grid, radiative_transfer.radiation_field)
@@ -30,9 +30,28 @@ void AGBStarModel::calcModel()
   std::vector<double> temperature_gas_old = atmosphere.temperature_gas;
   std::vector<double> temperature_dust_old = atmosphere.temperature_dust;
 
-  for (unsigned int it=0; it<1000; ++it)
+  std::vector<double> degree_of_condensation(atmosphere.nb_grid_points, 0);
+
+  chemistry.calcChemicalComposition(
+    std::vector<double>{}, 
+    atmosphere.temperature_gas, 
+    atmosphere.pressure_bar,
+    degree_of_condensation,
+    atmosphere.number_densities, 
+    atmosphere.mean_molecuar_weight,
+    atmosphere.total_element_density,
+    atmosphere.total_h_density);
+
+  atmosphere.equationOfState();
+
+  dust_species->calcDistribution();
+
+  chemistryDustIteration();
+  chemistryHydroIteration();
+
+  for (unsigned int it=0; it<config.nb_temperature_iter; ++it)
   {
-    chemistryDustIteration();
+    //chemistryDustIteration();
     chemistryHydroIteration();
 
     bool temperature_converged = temperatureIteration();
@@ -140,6 +159,8 @@ bool AGBStarModel::chemistryHydroIteration()
     
     hydrodynamics.calcWindVelocity();
 
+    atmosphere.equationOfState();
+
     std::pair<double, size_t> convergence = checkConvergence(alpha_old, hydrodynamics.alpha);
 
     std::cout << "Chemistry-Hydro iteration: " << iter << "  Max alpha change " 
@@ -147,6 +168,11 @@ bool AGBStarModel::chemistryHydroIteration()
               << alpha_old[convergence.second] << "  " << hydrodynamics.alpha[convergence.second] << "\n";
 
     alpha_old = hydrodynamics.alpha;
+    
+    if (std::abs(convergence.first) < config.hydrodynamics_convergence)
+      std::cout << "Chemistry-hydrodynamics converged!\n\n";
+    else
+      std::cout << "Chemistry-hydrodynamics not converged!\n\n";
 
     // std::string file_name = "hydro_test_" + std::to_string(iter) + ".dat";
     // hydrodynamics.saveOutput(file_name);
@@ -154,7 +180,7 @@ bool AGBStarModel::chemistryHydroIteration()
     if (std::abs(convergence.first) < config.hydrodynamics_convergence)
       break;
   }
-
+  
   //exit(0);
 
   // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
@@ -175,7 +201,7 @@ void AGBStarModel::radiativeTransfer()
       i, 
       atmosphere.absorption_coeff_dust[i], 
       atmosphere.scattering_coeff_dust[i]);
-
+  
   std::cout << "Calculating gas opacities\n\n";
   for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     transport_coeff.calculate(
@@ -184,7 +210,7 @@ void AGBStarModel::radiativeTransfer()
       atmosphere.number_densities[i], 
       atmosphere.absorption_coeff_gas[i], 
       atmosphere.scattering_coeff_gas[i]);
-
+  
   for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
   {
     for (size_t j=0; j<spectral_grid.nbSpectralPoints(); ++j)
@@ -197,7 +223,7 @@ void AGBStarModel::radiativeTransfer()
       atmosphere.extinction_coeff_dust[i][j] = atmosphere.absorption_coeff_dust[i][j] + atmosphere.scattering_coeff_dust[i][j];
     }
   }
-
+  
   radiative_transfer.solveRadiativeTransfer();
 }
 
@@ -266,11 +292,27 @@ bool AGBStarModel::temperatureIteration()
 
     // std::vector<double> delta_temperature_dust = delta_temperature_gas;
 
+    std::vector<double> temperature_gas_new = atmosphere.temperature_gas;
+    std::vector<double> temperature_dust_new = atmosphere.temperature_dust;
+    
     for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     {
-      atmosphere.temperature_gas[i] += delta_temperature_gas[i];
-      atmosphere.temperature_dust[i] += delta_temperature_dust[i];
+      temperature_gas_new[i] += delta_temperature_gas[i];
+      temperature_dust_new[i] += delta_temperature_dust[i];
     }
+
+    for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
+    {
+      atmosphere.temperature_gas[i] = std::sqrt(atmosphere.temperature_gas[i] * temperature_gas_new[i]);
+      atmosphere.temperature_dust[i] = std::sqrt(atmosphere.temperature_dust[i] * temperature_dust_new[i]);
+    }
+
+
+    // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
+    // {
+    //   atmosphere.temperature_gas[i] += delta_temperature_gas[i];
+    //   atmosphere.temperature_dust[i] += delta_temperature_dust[i];
+    // }
 
 
     if (config.smooth_temperature_profile)
@@ -279,8 +321,8 @@ bool AGBStarModel::temperatureIteration()
       smoothProfile(atmosphere.temperature_dust);
     }
 
-    //forceMonotonicProfile(atmosphere.temperature_gas);
-    //forceMonotonicProfile(atmosphere.temperature_dust);
+    forceMonotonicProfile(atmosphere.temperature_gas);
+    forceMonotonicProfile(atmosphere.temperature_dust);
 
     auto flux_convergence = checkFluxConvergence();
     
@@ -333,9 +375,15 @@ bool AGBStarModel::temperatureIteration()
 
     std::cout << "\n";
 
-    if (std::abs(flux_convergence.first) < config.temperature_convergence
-        && std::abs(max_energy_balance_gas.first) < config.temperature_convergence
-        && std::abs(max_energy_balance_dust.first) < config.temperature_convergence)
+    // if (std::abs(flux_convergence.first) < config.temperature_convergence
+    //     && std::abs(max_energy_balance_gas.first) < config.temperature_convergence
+    //     && std::abs(max_energy_balance_dust.first) < config.temperature_convergence)
+    // {
+    //   converged = true;
+    //   break;
+    // }
+
+    if (std::abs(flux_convergence.first) < config.temperature_convergence)
     {
       converged = true;
       break;
@@ -457,10 +505,9 @@ std::pair<double, size_t> AGBStarModel::checkConvergence(
 
 void AGBStarModel::forceMonotonicProfile(std::vector<double>& data)
 {
-  /*for (size_t i=1; i<data.size(); ++i)
+  for (size_t i=1; i<data.size(); ++i)
     if (data[i] > data[i-1])
-      data[i] = 0.99*data[i-1];*/
-  if (data[1] > data[0]) data[0] = 1.01 * data[1];
+      data[i] = 0.99*data[i-1];
 }
 
 

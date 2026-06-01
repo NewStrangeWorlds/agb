@@ -72,6 +72,18 @@ std::vector<double> TemperatureCorrection::calculate(
     }
   }
 
+
+  // for (size_t i=0; i<radius.size(); ++i)
+  // { 
+  //   if (std::abs(delta_temperature[i]) > 0.02)
+  //   {
+  //     if (delta_temperature[i] < 0)
+  //       delta_temperature[i] = -0.02;
+  //     else
+  //       delta_temperature[i] = 0.02;
+  //   }
+  // }
+
   return delta_temperature;
 }
 
