@@ -50,6 +50,13 @@ struct ModelConfig {
   unsigned int nb_hydrodynamics_iter = 200;
   double hydrodynamics_convergence = 1e-2;
 
+  //Structure solver for the stationary wind. Default: the Henyey-type global
+  //Newton-Raphson eigenvalue solve (Setup A: dust decoupled / alpha frozen in the
+  //Newton, alpha damped in the outer loop). Set false to fall back to the legacy
+  //Melia-Phi shooting method (kept for cross-checks). Not read from model.config;
+  //flip here if needed.
+  bool use_henyey_solver = false;
+
   std::string output_spectrum_path = "";
   std::string output_atmosphere_path = "";
   std::string output_dust_path = "";

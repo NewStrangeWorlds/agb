@@ -41,7 +41,7 @@ AnalyticDust::AnalyticDust(
 
 
 
-void AnalyticDust::calcDistribution()
+void AnalyticDust::calcDistribution(const double condensable_carbon_abundance)
 {
   const double condensation_temperature = 1100.;
   const double max_number_density = 5.0e-13;
@@ -92,7 +92,7 @@ void AnalyticDust::saveOutput(const std::string file_path)
 
 
 std::vector<double> AnalyticDust::degreeOfCondensation(
-  const double element_abundance)
+  const double condensable_carbon_abundance)
 {
   return std::vector<double>(atmosphere->nb_grid_points, 0);
 }

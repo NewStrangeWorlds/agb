@@ -29,14 +29,22 @@ class GailSedlmayrDust: public DustSpecies{
       Atmosphere* atmosphere_);
     ~GailSedlmayrDust() {}
 
-    void calcDistribution();
+    void calcDistribution(const double condensable_carbon_abundance);
     void calcTransportCoefficients(
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,
       std::vector<double>& scattering_coeff);
     std::vector<double> degreeOfCondensation(
-      const double carbon_abundance);
+      const double condensable_carbon_abundance);
     void saveOutput(const std::string file_path);
+
+    //frozen Gail-Sedlmayr kernels for the hydrodynamics Newton solver
+    std::vector<double> nucleationRate() const { return nucleation_rate; }
+    std::vector<double> growthTimescale() const { return growth_rate; }
+    std::vector<double> secondMoment() const
+    {
+      return (dust_moments.size() > 2) ? dust_moments[2] : std::vector<double>();
+    }
   private:
     //fixed values for graphite from Gail&Sedlmayr (1984)
     const double monomer_radius = 1.28e-8;
@@ -73,12 +81,6 @@ class GailSedlmayrDust: public DustSpecies{
       const double number_density_c2,
       const double number_density_c2h,
       const double number_density_c2h2);
-
-    std::vector<double> dustMomentZero();
-    std::vector<double> dustMoment(
-      const int order,
-      std::vector<double>& moment_prev,
-      const int n_lower);
 
     double saturationVapourPressure(
       const double temperature);

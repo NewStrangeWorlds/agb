@@ -28,9 +28,21 @@ class Hydrodynamics{
     void calcWindVelocity();
     void saveOutput(const std::string file_path);
 
+    //provide the (frozen) dust kernels so the Henyey solver can couple the
+    //dust-moment equations: J* [1/(cm^3 s)] and growth timescale tau [s] per point
+    void setDustState(
+      const std::vector<double>& nucleation_rate,
+      const std::vector<double>& growth_timescale,
+      const std::vector<double>& second_moment);
+
     std::vector<double> isothermal_sound_speed;
     std::vector<double> alpha;
     double mass_loss_rate = 0;
+
+    //true if the last calcWindVelocity could not update the structure (no interior
+    //critical point, or a rejected Henyey solve). The structure is then frozen, so
+    //a near-zero alpha change must NOT be mistaken for convergence by the caller.
+    bool last_solve_rejected = false;
   private:
     //adaptive under-relaxation state for the velocity update (see calcWindVelocity)
     double velocity_relaxation = 0.25;
@@ -48,6 +60,9 @@ class Hydrodynamics{
     //warm-start state for the Henyey structure solver (HENYEY_SOLVE path)
     std::vector<double> henyey_x_prev;
     std::vector<double> henyey_chi_prev;  //flux-mean extinction used last solve (for alpha damping)
+    std::vector<double> dust_nucleation_rate;  //J* [1/(cm^3 s)] (frozen, from the dust module)
+    std::vector<double> dust_growth_timescale; //tau [s]      (frozen, from the dust module)
+    std::vector<double> dust_second_moment;    //K2 [cm^-3]   (frozen, dust feedback reference)
 
     //solve the wind structure + mass-loss eigenvalue with the CppAD Henyey
     //solver (dust decoupled; dust opacity enters via the frozen chi_F) and write

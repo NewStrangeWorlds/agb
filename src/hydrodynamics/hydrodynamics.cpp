@@ -69,6 +69,8 @@ void Hydrodynamics::calcWindVelocity()
   sound_speed_derivative.assign(nb_grid_points, 0);
   phi.assign(nb_grid_points, 0);
 
+  last_solve_rejected = false;
+
   speedOfSound();
 
   std::vector<double> flux_weighted_extinction(nb_grid_points, 0);
@@ -91,6 +93,7 @@ void Hydrodynamics::calcWindVelocity()
   {
     std::cout << "Hydrodynamics: no interior critical point (index " << critical_point
               << ") - skipping velocity/density update this iteration\n";
+    last_solve_rejected = true;
     return;
   }
 
@@ -105,12 +108,18 @@ void Hydrodynamics::calcWindVelocity()
     sound_speed_derivative[critical_point],
     flux_weighted_extinction[critical_point]);
 
-  //Henyey path (HENYEY_SOLVE=1): predict the mass-loss rate self-consistently as a
-  //transonic eigenvalue (Setup A). Seed Mdot from the shooting estimate above
-  //(validated to converge) and warm-start Phi from the previous solve.
-  if (std::getenv("HENYEY_SOLVE"))
+  //Henyey path (default; config->use_henyey_solver): predict the mass-loss rate
+  //self-consistently as a transonic eigenvalue (Setup A). Seed Mdot from the
+  //shooting estimate above and warm-start Phi from the previous solve. On a
+  //rejected solve we do NOT fall back to shooting: solveStructureHenyey keeps the
+  //last good structure and the next outer iteration retries from the same
+  //warm-start. (Overwriting with the shooting result on reject was observed to
+  //knock the solution onto a different, non-settling Mdot branch -- shooting is
+  //exactly the unstable method we are replacing.)
+  if (config->use_henyey_solver)
   {
-    solveStructureHenyey(flux_weighted_extinction, mass_loss_rate_eigenvalue);
+    last_solve_rejected = !solveStructureHenyey(
+      flux_weighted_extinction, mass_loss_rate_eigenvalue);
     return;
   }
 
@@ -175,7 +184,8 @@ void Hydrodynamics::calcWindVelocity()
   //With the radius grid (hence R*) also fixed this formally over-constrains the
   //system; the eigenvalue/fixed ratio printed below measures the inconsistency
   //(how far the critical point is from being regular for this prescribed Mdot).
-  const double mass_loss_rate_cgs = config->stellar_mass_loss_rate;
+  //const double mass_loss_rate_cgs = config->stellar_mass_loss_rate;
+  const double mass_loss_rate_cgs = mass_loss_rate_eigenvalue;
 
   //store the mass loss rate in solar masses per year for output/diagnostics
   mass_loss_rate = mass_loss_rate_cgs / constants::mass_sun * constants::year;
@@ -283,6 +293,17 @@ void Hydrodynamics::calcWindVelocity()
 
 
 
+void Hydrodynamics::setDustState(
+  const std::vector<double>& nucleation_rate,
+  const std::vector<double>& growth_timescale,
+  const std::vector<double>& second_moment)
+{
+  dust_nucleation_rate = nucleation_rate;
+  dust_growth_timescale = growth_timescale;
+  dust_second_moment = second_moment;
+}
+
+
 bool Hydrodynamics::solveStructureHenyey(
   const std::vector<double>& flux_weighted_extinction,
   const double seed_mass_loss_rate)
@@ -318,18 +339,69 @@ bool Hydrodynamics::solveStructureHenyey(
   }
   henyey_chi_prev = chi_used;
 
+  //couple the dust moments in the Newton with the (frozen) Gail-Sedlmayr kernels.
+  //GATED (HENYEY_DUST): the K0..K5 block spans ~20 orders of magnitude, so the
+  //coupled Jacobian is ill-conditioned and the un-scaled Newton fails -- this needs
+  //per-block residual/variable scaling first. Off by default (dust decoupled, the
+  //opacity enters via the frozen chi_F) so the working Setup A is preserved.
+  const bool have_dust_kernels = std::getenv("HENYEY_DUST")
+    && dust_nucleation_rate.size() == M && dust_growth_timescale.size() == M;
+
   StructureSolver solver(M);
   for (size_t i=0; i<M; ++i)
   {
     solver.radius[i] = atmosphere->radius[i];
     solver.sound_speed[i] = isothermal_sound_speed[i];
     solver.flux_mean_extinction[i] = chi_used[i];
-    solver.nucleation_per_h[i] = 0.;   //dust decoupled: its opacity enters via chi_F
-    solver.growth_timescale[i] = 1.;
+
+    if (have_dust_kernels && atmosphere->total_h_density[i] > 0.)
+    {
+      solver.nucleation_per_h[i] = dust_nucleation_rate[i] / atmosphere->total_h_density[i];
+      solver.growth_timescale[i] = std::max(dust_growth_timescale[i], 1e-30);
+    }
+    else
+    {
+      solver.nucleation_per_h[i] = 0.;
+      solver.growth_timescale[i] = 1.;
+    }
   }
   solver.sound_speed2_deriv = sound_speed_derivative;
   solver.stellar_luminosity = config->stellar_luminosity;
   solver.gravitational_mass = constants::gravitation_const * config->stellar_mass;
+
+  //Stage 2 dust radiative-acceleration feedback (with the dust coupled): split the
+  //(damped) flux-mean extinction into gas + dust parts by their current flux-mean
+  //fractions, and let the dust part scale with the in-Newton 2nd moment relative to
+  //its reference value. This puts the local dust -> alpha -> wind loop in the Newton.
+  //GATED (HENYEY_ALPHA_FB), and OFF by default: for a marginal dust-driven wind
+  //(alpha ~ 1 at the sonic point) this feedback is near-critical -- any K2 excursion
+  //pushes alpha super-Eddington and the Newton blows up (cp->1, Mdot->NaN). The
+  //robust approach is to keep alpha frozen in the Newton and damp it in the outer
+  //loop (Setup A), as Winters/Dominik do. Enabling this needs feedback-strength
+  //continuation (ramp) or a trust-region step -- future work.
+  if (have_dust_kernels && std::getenv("HENYEY_ALPHA_FB"))
+  {
+    solver.dust_alpha_feedback = true;
+    solver.chi_gas.assign(M, 0.);
+    solver.chi_dust_ref.assign(M, 0.);
+    solver.k2_ref.assign(M, 1e-300);
+
+    for (size_t i=0; i<M; ++i)
+    {
+      const double chi_total = flux_weighted_extinction[i];
+      const double chi_gas_raw =
+        radiation_field[i].fluxWeightedExtinction(atmosphere->extinction_coeff_gas[i]);
+      const double gas_frac = (chi_total > 0.)
+        ? std::min(std::max(chi_gas_raw/chi_total, 0.), 1.) : 1.;
+
+      solver.chi_gas[i] = chi_used[i] * gas_frac;
+      solver.chi_dust_ref[i] = chi_used[i] * (1. - gas_frac);
+
+      if (dust_second_moment.size() == M && atmosphere->total_h_density[i] > 0.)
+        solver.k2_ref[i] =
+          std::max(dust_second_moment[i] / atmosphere->total_h_density[i], 1e-300);
+    }
+  }
 
   //inner-velocity boundary condition fixed at the PHYSICAL base velocity (from the
   //current structure), not an arbitrary fraction of c_T. A too-high inner velocity

@@ -33,6 +33,17 @@ namespace {
     return CppAD::CondExpGt(x, CppAD::AD<double>(floor), x, CppAD::AD<double>(floor));
   }
 
+  //clamp to [lo, hi], taped-safe for both scalar types
+  inline double clampRange(const double x, const double lo, const double hi)
+  {
+    return x < lo ? lo : (x > hi ? hi : x);
+  }
+  inline CppAD::AD<double> clampRange(const CppAD::AD<double>& x, const double lo, const double hi)
+  {
+    const CppAD::AD<double> a = CppAD::CondExpLt(x, CppAD::AD<double>(lo), CppAD::AD<double>(lo), x);
+    return CppAD::CondExpGt(a, CppAD::AD<double>(hi), CppAD::AD<double>(hi), a);
+  }
+
 }
 
 
@@ -121,12 +132,22 @@ void StructureSolver::fillStructureResidual(
     const bool supersonic = (static_cast<int>(i) > critical_point);
     return windVelocity(phi(i), sound_speed[i], supersonic); };
 
+  //flux-mean extinction at point i. With the dust feedback enabled it depends on
+  //the in-Newton 2nd moment K2 = K(2,i): chi_F = chi_gas + chi_dust_ref*(K2/k2_ref).
+  //dust-opacity ratio bounded to [0, 5]: a transient K2 overshoot in a Newton step
+  //must not blow alpha up to super-Eddington/NaN; the bound is inactive at
+  //convergence (where the ratio ~ 1 since k2_ref tracks the converged K2).
+  auto chi_mean = [&](const size_t i) -> Scalar {
+    if (!dust_alpha_feedback) return Scalar(flux_mean_extinction[i]);
+    const Scalar ratio = clampRange(K(2, i) / std::max(k2_ref[i], 1e-300), 0., 5.);
+    return chi_gas[i] + chi_dust_ref[i] * ratio; };
+
   //--- wind (Melia-Phi) residual, block 0 ---
   auto phi_rhs = [&](const size_t i) -> Scalar {
     const Scalar v = vel(i);
     const double r = radius[i];
     const double c2 = sound_speed[i]*sound_speed[i];
-    const Scalar alpha = flux_mean_extinction[i] * stellar_luminosity * r*r * v
+    const Scalar alpha = chi_mean(i) * stellar_luminosity * r*r * v
                        / (light_c * gravitational_mass * mdot);
     return -gravitational_mass/(2.*v*r*r) * (1. - alpha) + c2/(v*r); };
 
@@ -207,7 +228,15 @@ std::vector<Scalar> StructureSolver::residualEigen(
   const double r = radius[cp];
   const double c2 = sound_speed[cp]*sound_speed[cp];
 
-  const Scalar alpha_cp = flux_mean_extinction[cp] * stellar_luminosity * r*r * v_cp
+  //flux-mean extinction at the critical point, with the dust feedback (K2-dependent)
+  Scalar chi_cp = Scalar(flux_mean_extinction[cp]);
+  if (dust_alpha_feedback)
+  {
+    const Scalar ratio = clampRange(x[(1+2)*M + cp] / std::max(k2_ref[cp], 1e-300), 0., 5.);
+    chi_cp = chi_gas[cp] + chi_dust_ref[cp] * ratio;
+  }
+
+  const Scalar alpha_cp = chi_cp * stellar_luminosity * r*r * v_cp
                         / (light_c * gravitational_mass * mdot);
 
   const Scalar regularity = -gravitational_mass/(r*r) * (1. - alpha_cp)
@@ -377,7 +406,6 @@ std::vector<double> StructureSolver::solveEigen(
   const size_t s_idx = (1 + nb_moments)*M;  //index of ln(Mdot)
 
   double res_norm = 0.;
-  double res_norm_0 = 0.;
   int it = 0;
 
   for (; it < max_iterations; ++it)
@@ -386,16 +414,38 @@ std::vector<double> StructureSolver::solveEigen(
       critical_point = locateCriticalPoint(x, sound_speed, M);
 
     std::vector<double> res = residualEigen(x);
+
+    //--- per-block scaling ---
+    //Scale each variable by its magnitude (Phi by its block peak ~ inner Phi, each
+    //K_j by its block peak, ln(Mdot) absolute) and each equation by its primary
+    //variable's scale (the regularity row by ~G M / r_c^2). Without this the
+    //K0..K5 block spans ~20 orders of magnitude and the dense solve is hopelessly
+    //ill-conditioned. Solve (R^-1 J S) y = -R^-1 res, then delta = S y.
+    double s_phi = 1.0;
+    for (size_t i=0; i<M; ++i) s_phi = std::max(s_phi, std::abs(x[i]));
+    std::vector<double> s_k(nb_moments, 1e-300);
+    for (int j=0; j<nb_moments; ++j)
+      for (size_t i=0; i<M; ++i)
+        s_k[j] = std::max(s_k[j], std::abs(x[(1+j)*M + i]));
+    const double s_mdot = std::max(std::abs(x[s_idx]), 1.0);
+
+    auto var_scale = [&](const size_t idx) -> double {
+      if (idx == s_idx) return s_mdot;
+      const size_t blk = idx / M;            //0 = Phi, 1..nb_moments = K0..K5
+      return (blk == 0) ? s_phi : s_k[blk-1]; };
+
+    auto eq_scale = [&](const size_t k) -> double {
+      if (k == s_idx)
+        return fix_mass_loss_rate ? 1.0
+             : gravitational_mass/(radius[critical_point]*radius[critical_point]);
+      return var_scale(k); };
+
+    //dimensionless (scaled) residual RMS as the convergence measure
     res_norm = 0.;
-    for (const double r : res) res_norm += r*r;
-    res_norm = std::sqrt(res_norm);
+    for (size_t k=0; k<N; ++k) { const double e = res[k]/eq_scale(k); res_norm += e*e; }
+    res_norm = std::sqrt(res_norm / N);
 
-    if (it == 0) res_norm_0 = res_norm;
-
-    //relative convergence: the residual mixes scales over many orders of
-    //magnitude, so an absolute threshold is meaningless. Stop once the residual
-    //has been reduced by 'tolerance' relative to the initial guess.
-    if (res_norm < tolerance * res_norm_0) break;
+    if (res_norm < tolerance) break;
 
     //--- CppAD dense Jacobian ---
     std::vector<AD<double>> ax(N);
@@ -407,15 +457,19 @@ std::vector<double> StructureSolver::solveEigen(
 
     const std::vector<double> jac = f.Jacobian(x);
 
+    //--- scaled linear solve ---
     Eigen::MatrixXd J(N, N);
     Eigen::VectorXd b(N);
-    for (size_t i=0; i<N; ++i)
+    for (size_t k=0; k<N; ++k)
     {
-      b(i) = -res[i];
-      for (size_t k=0; k<N; ++k) J(i, k) = jac[i*N + k];
+      const double rk = eq_scale(k);
+      b(k) = -res[k]/rk;
+      for (size_t j=0; j<N; ++j) J(k, j) = jac[k*N + j] * var_scale(j) / rk;
     }
 
-    const Eigen::VectorXd delta = J.partialPivLu().solve(b);
+    const Eigen::VectorXd y = J.partialPivLu().solve(b);
+    Eigen::VectorXd delta(N);
+    for (size_t j=0; j<N; ++j) delta(j) = var_scale(j) * y(j);
 
     //--- damped update ---
     //The residual mixes scales over ~20 orders of magnitude, so a residual-norm

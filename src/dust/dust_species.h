@@ -29,9 +29,20 @@ class DustSpecies{
     std::vector<std::vector<double>> size_distribution;
     std::vector<std::vector<double>> particle_radius;
 
-    virtual void calcDistribution() = 0;
+    //condensable_carbon_abundance = (eps_C - eps_O) (all O assumed locked in CO): the
+    //carbon that can actually condense. Dust models that do not deplete may ignore it.
+    virtual void calcDistribution(const double condensable_carbon_abundance) = 0;
     virtual std::vector<double> degreeOfCondensation(
-      const double element_abundance) = 0;
+      const double condensable_carbon_abundance) = 0;
+
+    //nucleation rate J* [1/(cm^3 s)] and growth timescale tau [s] per grid point,
+    //for coupling the dust-moment equations into the hydrodynamics Newton solver.
+    //Default empty (a dust model without a moment description provides nothing).
+    virtual std::vector<double> nucleationRate() const { return {}; }
+    virtual std::vector<double> growthTimescale() const { return {}; }
+    //dimensional 2nd dust moment K2 [cm^-3] (sets the dust geometric cross-section),
+    //the reference value for the in-Newton dust radiative-acceleration feedback
+    virtual std::vector<double> secondMoment() const { return {}; }
     void calcTransportCoefficients(
       const size_t radius_idx,
       std::vector<double>& absorption_coeff,

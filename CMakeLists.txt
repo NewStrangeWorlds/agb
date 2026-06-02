@@ -75,11 +75,11 @@ find_package(OpenMP REQUIRED)
 
 include(FetchContent)
 
-#download the FastChem 3.1 if necessary
+#download FastChem 4.0.2 if necessary
 FetchContent_Declare(
   fastchem
   GIT_REPOSITORY https://github.com/exoclime/fastchem
-  GIT_TAG        e8dbeb7ec7719dbd0021d672a0b5d330e924a764
+  GIT_TAG        v4.0.2
 )
 
 

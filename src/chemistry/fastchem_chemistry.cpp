@@ -29,16 +29,22 @@ FastChemChemistry::FastChemChemistry(
   //the original, unscaled abundances from the FastChem input file
   reference_element_abundances = fastchem.getElementAbundances();
 
+  //FastChem 4.0 keeps separate index spaces for gas-phase species (number
+  //densities) and elements (abundances), so we look up both for every species
   fastchem_species_indices.assign(constants::species_data.size(), fastchem::FASTCHEM_UNKNOWN_SPECIES);
+  fastchem_element_indices.assign(constants::species_data.size(), fastchem::FASTCHEM_UNKNOWN_SPECIES);
 
   for (size_t i=0; i<constants::species_data.size(); ++i)
-    fastchem_species_indices[i] = fastchem.getSpeciesIndex(constants::species_data[i].fastchem_symbol);
-    
-  
+  {
+    fastchem_species_indices[i] = fastchem.getGasSpeciesIndex(constants::species_data[i].fastchem_symbol);
+    fastchem_element_indices[i] = fastchem.getElementIndex(constants::species_data[i].fastchem_symbol);
+  }
+
+
   //check if C, O, and H are present in FastChem
-  if (fastchem_species_indices[_H] == fastchem::FASTCHEM_UNKNOWN_SPECIES 
-      || fastchem_species_indices[_O] == fastchem::FASTCHEM_UNKNOWN_SPECIES 
-      || fastchem_species_indices[_C] == fastchem::FASTCHEM_UNKNOWN_SPECIES)
+  if (fastchem_element_indices[_H] == fastchem::FASTCHEM_UNKNOWN_SPECIES
+      || fastchem_element_indices[_O] == fastchem::FASTCHEM_UNKNOWN_SPECIES
+      || fastchem_element_indices[_C] == fastchem::FASTCHEM_UNKNOWN_SPECIES)
   {
     std::string error_message = "Critical elements (H, C, or O) not found in FastChem\n";
     throw InvalidInput(std::string ("FastChemChemistry::FastChemChemistry"), error_message);
@@ -46,12 +52,12 @@ FastChemChemistry::FastChemChemistry(
 
   //set metallicity and element abundances
   element_abundances = reference_element_abundances;
-  
+
   for (size_t i=0; i<element_abundances.size(); ++i)
-    if (i != fastchem_species_indices[_H] && (i != fastchem_species_indices[_He] && fastchem_species_indices[_He] != fastchem::FASTCHEM_UNKNOWN_SPECIES) )
+    if (i != fastchem_element_indices[_H] && (i != fastchem_element_indices[_He] && fastchem_element_indices[_He] != fastchem::FASTCHEM_UNKNOWN_SPECIES) )
       element_abundances[i] *= metallicity_factor;
 
-  element_abundances[fastchem_species_indices[_C]] = element_abundances[fastchem_species_indices[_O]] * co_ratio;
+  element_abundances[fastchem_element_indices[_C]] = element_abundances[fastchem_element_indices[_O]] * co_ratio;
 
 
   fastchem.setElementAbundances(element_abundances);
@@ -81,10 +87,10 @@ void FastChemChemistry::calcChemicalComposition(
     element_abundances = reference_element_abundances;
   
     for (size_t i=0; i<element_abundances.size(); ++i)
-      if (i != fastchem_species_indices[_H] && (i != fastchem_species_indices[_He] && fastchem_species_indices[_He] != fastchem::FASTCHEM_UNKNOWN_SPECIES) )
+      if (i != fastchem_element_indices[_H] && (i != fastchem_element_indices[_He] && fastchem_element_indices[_He] != fastchem::FASTCHEM_UNKNOWN_SPECIES) )
         element_abundances[i] *= metallicity_factor;
 
-    element_abundances[fastchem_species_indices[_C]] = element_abundances[fastchem_species_indices[_O]] * co_ratio;
+    element_abundances[fastchem_element_indices[_C]] = element_abundances[fastchem_element_indices[_O]] * co_ratio;
 
     fastchem.setElementAbundances(element_abundances);
 
@@ -105,7 +111,7 @@ void FastChemChemistry::calcChemicalComposition(
     //adjust carbon element abundances
     std::vector<double> element_abundances_cond = element_abundances;
 
-    element_abundances_cond[fastchem_species_indices[_C]] *= (1 - degree_of_condensation_c[r]);
+    element_abundances_cond[fastchem_element_indices[_C]] *= (1 - degree_of_condensation_c[r]);
 
     fastchem.setElementAbundances(element_abundances_cond);
 
@@ -140,7 +146,7 @@ void FastChemChemistry::calcChemicalComposition(
 
     total_element_density[r] = output.total_element_density[0];
 
-    total_h_density[r] = element_abundances_cond[fastchem_species_indices[_H]] * total_element_density[r];
+    total_h_density[r] = element_abundances_cond[fastchem_element_indices[_H]] * total_element_density[r];
   }
 
   fastchem.setElementAbundances(element_abundances);

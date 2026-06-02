@@ -22,7 +22,10 @@ class FastChemChemistry{
     ~FastChemChemistry() {}
 
     std::vector<double> element_abundances;
+    //index of each species in FastChem's gas-phase species list (for number densities)
     std::vector<size_t> fastchem_species_indices;
+    //index of each species in FastChem's element list (only valid for elements)
+    std::vector<size_t> fastchem_element_indices;
 
     void calcChemicalComposition(
       const std::vector<double>& parameters,
@@ -34,7 +37,7 @@ class FastChemChemistry{
       std::vector<double>& total_element_density,
       std::vector<double>& total_h_density);
   private:
-    fastchem::FastChem<long double> fastchem;
+    fastchem::FastChem fastchem;
 
     std::vector<chemical_species_id> species;
     std::vector<double> reference_element_abundances;

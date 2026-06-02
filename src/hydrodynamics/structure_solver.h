@@ -48,6 +48,16 @@ class StructureSolver{
     std::vector<double> flux_mean_extinction;//chi_F(r) [1/cm], frozen from the RT
     std::vector<double> sound_speed2_deriv;  //d(c_T^2)/dr [cm/s^2], frozen
 
+    //--- in-Newton dust radiative-acceleration feedback (Stage 2) ---
+    //When enabled, the flux-mean extinction (hence alpha) depends on the in-Newton
+    //2nd dust moment: chi_F = chi_gas + chi_dust_ref * (K2 / k2_ref), so the local
+    //dust -> opacity -> alpha -> wind loop is solved implicitly. The gas part and
+    //the reference dust opacity/moment are frozen from the last RT solve.
+    bool dust_alpha_feedback = false;
+    std::vector<double> chi_gas;       //frozen gas flux-mean extinction [1/cm]
+    std::vector<double> chi_dust_ref;  //frozen dust flux-mean extinction at k2_ref [1/cm]
+    std::vector<double> k2_ref;        //reference (current) normalized 2nd moment
+
     //frozen dust source coefficients (n<H>-normalized), from the Gail-Sedlmayr
     //nucleation/growth kernels evaluated at the current (frozen) T and chemistry
     std::vector<double> nucleation_per_h;    //J* / n<H>  [1/s]

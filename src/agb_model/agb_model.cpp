@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <cmath>
 
 #include "../additional/aux_functions.h"
 
@@ -44,7 +46,9 @@ void AGBStarModel::calcModel()
 
   atmosphere.equationOfState();
 
-  dust_species->calcDistribution();
+  dust_species->calcDistribution(
+      chemistry.element_abundances[chemistry.fastchem_element_indices[_C]]
+    - chemistry.element_abundances[chemistry.fastchem_element_indices[_O]]);
 
   chemistryDustIteration();
   chemistryHydroIteration();
@@ -103,45 +107,37 @@ void AGBStarModel::calcModel()
 
 bool AGBStarModel::chemistryDustIteration()
 {
+  //Gas-phase chemistry at the full (undepleted) element abundances. The carbon
+  //consumed by dust formation is NOT removed here: the Gail & Sedlmayr moment sweep
+  //(GailSedlmayrDust::calcDistribution) depletes the growth species DIFFERENTIALLY
+  //along the outward integration, throttling growth/nucleation by (1 - fc) with fc the
+  //running degree of condensation. That is the literature-standard, single-pass
+  //treatment (GS book Sec. 14.3; Winters Eq. 5.4) and avoids the fragile outer
+  //chemistry<->dust fixed-point iteration (which can oscillate, since the moment method
+  //recomputes the dust from scratch with no memory of what already condensed).
   std::vector<double> degree_of_condensation(atmosphere.nb_grid_points, 0);
 
   chemistry.calcChemicalComposition(
-    std::vector<double>{}, 
-    atmosphere.temperature_gas, 
+    std::vector<double>{},
+    atmosphere.temperature_gas,
     atmosphere.pressure_bar,
     degree_of_condensation,
-    atmosphere.number_densities, 
+    atmosphere.number_densities,
     atmosphere.mean_molecuar_weight,
     atmosphere.total_element_density,
     atmosphere.total_h_density);
 
   atmosphere.equationOfState();
 
-  dust_species->calcDistribution();
+  //condensable carbon abundance = eps_C - eps_O (all oxygen assumed locked in CO)
+  const double condensable_carbon_abundance =
+      chemistry.element_abundances[chemistry.fastchem_element_indices[_C]]
+    - chemistry.element_abundances[chemistry.fastchem_element_indices[_O]];
 
-  /*degree_of_condensation = dust_species->degreeOfCondensation(
-    chemistry.element_abundances[chemistry.fastchem_species_indices[_C]]);
-  
-  chemistry.calcChemicalComposition(
-    std::vector<double>{}, 
-    atmosphere.temperature_gas, 
-    atmosphere.pressure_bar,
-    degree_of_condensation,
-    atmosphere.number_densities, 
-    atmosphere.mean_molecuar_weight,
-    atmosphere.total_element_density,
-    atmosphere.total_h_density);
-
-  atmosphere.equationOfState();*/
-
+  dust_species->calcDistribution(condensable_carbon_abundance);
 
   if (config.output_dust_path != "")
     dust_species->saveOutput(config.output_dust_path);
-
-  // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
-  //   std::cout << i << "\t" << degree_of_condensation[i] << "\n";
-  // std::cout << chemistry.element_abundances[chemistry.fastchem_species_indices[_C]] << "\t" << chemistry.element_abundances[chemistry.fastchem_species_indices[_O]] << "\n";
-  // exit(0);
 
   return true;
 }
@@ -156,7 +152,14 @@ bool AGBStarModel::chemistryHydroIteration()
   {
     chemistryDustIteration();
     radiativeTransfer();
-    
+
+    //hand the (frozen) dust kernels to the hydrodynamics so the Henyey solver can
+    //couple the dust-moment equations (no-op for the shooting path)
+    hydrodynamics.setDustState(
+      dust_species->nucleationRate(),
+      dust_species->growthTimescale(),
+      dust_species->secondMoment());
+
     hydrodynamics.calcWindVelocity();
 
     atmosphere.equationOfState();
@@ -168,16 +171,24 @@ bool AGBStarModel::chemistryHydroIteration()
               << alpha_old[convergence.second] << "  " << hydrodynamics.alpha[convergence.second] << "\n";
 
     alpha_old = hydrodynamics.alpha;
-    
-    if (std::abs(convergence.first) < config.hydrodynamics_convergence)
+
+    //A rejected wind solve (no interior critical point / non-finite Mdot) leaves the
+    //structure frozen, so alpha does not change -- that is NOT convergence. Require a
+    //genuine, accepted solve before declaring the chemistry-hydro loop converged.
+    const bool converged = std::abs(convergence.first) < config.hydrodynamics_convergence
+                           && !hydrodynamics.last_solve_rejected;
+
+    if (converged)
       std::cout << "Chemistry-hydrodynamics converged!\n\n";
+    else if (hydrodynamics.last_solve_rejected)
+      std::cout << "Chemistry-hydrodynamics not converged (wind solve rejected)!\n\n";
     else
       std::cout << "Chemistry-hydrodynamics not converged!\n\n";
 
     // std::string file_name = "hydro_test_" + std::to_string(iter) + ".dat";
     // hydrodynamics.saveOutput(file_name);
 
-    if (std::abs(convergence.first) < config.hydrodynamics_convergence)
+    if (converged)
       break;
   }
   
@@ -185,7 +196,7 @@ bool AGBStarModel::chemistryHydroIteration()
 
   // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
   //   std::cout << i << "\t" << degree_of_condensation[i] << "\n";
-  // std::cout << chemistry.element_abundances[chemistry.fastchem_species_indices[_C]] << "\t" << chemistry.element_abundances[chemistry.fastchem_species_indices[_O]] << "\n";
+  // std::cout << chemistry.element_abundances[chemistry.fastchem_element_indices[_C]] << "\t" << chemistry.element_abundances[chemistry.fastchem_element_indices[_O]] << "\n";
   // exit(0);
 
   return true;
