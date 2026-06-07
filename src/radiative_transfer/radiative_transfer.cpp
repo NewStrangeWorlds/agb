@@ -9,9 +9,10 @@
 #include <iterator>
 #include <omp.h>
 #include <sstream>
-#include <algorithm> 
-#include <assert.h> 
+#include <algorithm>
+#include <assert.h>
 #include <cmath>
+#include <chrono>
 
 #include "../additional/aux_functions.h"
 #include "../spectral_grid/spectral_grid.h"
@@ -41,6 +42,7 @@ RadiativeTransfer::RadiativeTransfer(
   extinction_coeff.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   scattering_coeff.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
   sphericality_factor.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
+  planck_emission.assign(nb_spectral_points, std::vector<double>(nb_grid_points, 0.0));
 
   createImpactParameterGrid();
 
@@ -50,27 +52,49 @@ RadiativeTransfer::RadiativeTransfer(
 
 
 
-std::vector<double> RadiativeTransfer::sourceFunction(
+//Precompute the iteration-invariant thermal emission term
+//  absorption_gas*B(T_gas) + absorption_dust*B(T_dust)
+//for every spectral point and grid point. Temperature and opacities are fixed
+//for the whole RT solve, so this replaces the per-iteration Planck evaluations
+//in both sourceFunction() and solveMomentSystem(). The product/sum order matches
+//the previous inline code, so downstream results are bit-identical.
+void RadiativeTransfer::precomputeEmission()
+{
+  #pragma omp parallel for
+  for (size_t nu=0; nu<nb_spectral_points; ++nu)
+  {
+    const double wavelength = spectral_grid->wavelength_list[nu];
+
+    for (size_t i=0; i<nb_grid_points; ++i)
+      planck_emission[nu][i] =
+          atmosphere->absorption_coeff_gas[i][nu]
+            * aux::planckFunctionWavelength(atmosphere->temperature_gas[i], wavelength)
+        + atmosphere->absorption_coeff_dust[i][nu]
+            * aux::planckFunctionWavelength(atmosphere->temperature_dust[i], wavelength);
+  }
+}
+
+
+const std::vector<double>& RadiativeTransfer::sourceFunction(
   const int nu)
 {
-  std::vector<double> source_function(nb_grid_points, 0.);
+  //per-thread reusable buffer (callers are inside omp-parallel-over-nu regions)
+  static thread_local std::vector<double> source_function;
+  source_function.resize(nb_grid_points);
+
+  const std::vector<double>& emission = planck_emission[nu];
 
   for (size_t i=0; i<nb_grid_points; ++i)
   {
     const double extinction_coeff = atmosphere->scattering_coeff[i][nu] + atmosphere->absorption_coeff[i][nu];
-    const double planck_function_gas = aux::planckFunctionWavelength(
-      atmosphere->temperature_gas[i], 
-      spectral_grid->wavelength_list[nu]);
 
-    const double planck_function_dust = aux::planckFunctionWavelength(
-      atmosphere->temperature_dust[i], 
-      spectral_grid->wavelength_list[nu]);
-
-    source_function[i] = atmosphere->absorption_coeff_gas[i][nu] * planck_function_gas
-                        + atmosphere->absorption_coeff_dust[i][nu] * planck_function_dust
-                        + atmosphere->scattering_coeff[i][nu] * radiation_field[i].mean_intensity[nu];
-
-    source_function[i] /= extinction_coeff;
+    //emission[i] = absorption_gas*B(T_gas) + absorption_dust*B(T_dust) is the
+    //precomputed, iteration-invariant numerator; only the scattering term varies
+    //per iteration. Numerator association and the single division match the
+    //original inline form, so the result is bit-identical.
+    source_function[i] = (emission[i]
+                        + atmosphere->scattering_coeff[i][nu] * radiation_field[i].mean_intensity[nu])
+                        / extinction_coeff;
   }
 
   return source_function;
@@ -106,12 +130,14 @@ double RadiativeTransfer::boundaryFluxCorrection()
 
 void RadiativeTransfer::calcEddingtonFactors()
 {
-  std::vector<double> x = radiation_field.back().angles;
-  std::vector<double> y(x.size(), 0);
+  const std::vector<double>& x = radiation_field.back().angles;
 
-
+  //each spectral point is independent; y is made thread-local below
+  #pragma omp parallel for
   for (size_t i=0; i<nb_spectral_points; ++i)
   {
+    std::vector<double> y(x.size(), 0);
+
     for (size_t j=0; j<x.size(); ++j)
       y[j] = radiation_field.back().angle_grid[j].u[i]*x[j];
 
@@ -128,9 +154,10 @@ void RadiativeTransfer::calcEddingtonFactors()
 
 void RadiativeTransfer::calcSphericalityFactor()
 {
-
+  //each spectral point is independent (y is already loop-local)
+  #pragma omp parallel for
   for (size_t i=0; i<nb_spectral_points; ++i)
-  { 
+  {
     std::vector<double> y(nb_grid_points, 0);
 
     for (size_t j=0; j<nb_grid_points; ++j)
@@ -157,12 +184,18 @@ void RadiativeTransfer::calcSphericalityFactor()
 
 void RadiativeTransfer::solveRadiativeTransfer()
 {
+  const auto rt_wall_t0 = std::chrono::steady_clock::now();
+
   for (size_t i=0; i<nb_grid_points; ++i)
     for (size_t j=0; j<nb_spectral_points; ++j)
     {
       extinction_coeff[j][i] = atmosphere->absorption_coeff[i][j] + atmosphere->scattering_coeff[i][j];
       scattering_coeff[j][i] = atmosphere->scattering_coeff[i][j];
     }
+
+  //thermal emission depends only on temperature and opacities (fixed for this
+  //solve), so compute it once here instead of every iteration
+  precomputeEmission();
 
   double boundary_flux_correction = boundaryFluxCorrection();
   std::vector<double> boundary_planck_derivative(nb_spectral_points, 0.);
@@ -206,7 +239,7 @@ void RadiativeTransfer::solveRadiativeTransfer()
     #pragma omp parallel for
     for (size_t i=0; i<nb_spectral_points; ++i)
     {
-      std::vector<double> source_function = sourceFunction(i);
+      const std::vector<double>& source_function = sourceFunction(i);
 
       for (auto & ip : impact_parameter_grid)
         ip.solveRadiativeTransfer(
@@ -218,9 +251,10 @@ void RadiativeTransfer::solveRadiativeTransfer()
           source_function);
     }
 
+    #pragma omp parallel for
     for (size_t i=0; i<nb_grid_points; ++i)
       radiation_field[i].angularIntegration();
-  
+
     calcEddingtonFactors();
     calcSphericalityFactor();
 
@@ -262,7 +296,7 @@ void RadiativeTransfer::solveRadiativeTransfer()
   #pragma omp parallel for
   for (size_t i=0; i<nb_spectral_points; ++i)
   {
-    std::vector<double> source_function = sourceFunction(i);
+    const std::vector<double>& source_function = sourceFunction(i);
 
     calcFlux(
       i,
@@ -279,6 +313,11 @@ void RadiativeTransfer::solveRadiativeTransfer()
   #pragma omp parallel for
   for (size_t i=0; i<nb_grid_points; ++i)
     radiation_field[i].wavelengthIntegration();
+
+  const auto rt_wall_t1 = std::chrono::steady_clock::now();
+  std::cout << "RT solve wall time: "
+            << std::chrono::duration<double>(rt_wall_t1 - rt_wall_t0).count()
+            << " s\n";
 
   // std::cout << "Radiation field : \n";
 

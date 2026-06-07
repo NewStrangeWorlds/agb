@@ -31,25 +31,22 @@ void RadiativeTransfer::solveMomentSystem(
   const double boundary_planck_derivative,
   const double boundary_flux_correction)
 {
-  const std::vector<double> x_grid = generateXGrid(
-    extinction_coeff[nu], 
+  const std::vector<double>& x_grid = generateXGrid(
+    extinction_coeff[nu],
     radius,
     sphericality_factor[nu]);
 
-  std::vector<double> emission_coeff(nb_grid_points, 0);
+  //iteration-invariant thermal emission, precomputed once per RT solve in
+  //precomputeEmission() (absorption_gas*B(T_gas) + absorption_dust*B(T_dust));
+  //bit-identical to the previous inline evaluation since products commute
+  const std::vector<double>& emission_coeff = planck_emission[nu];
 
-  for (size_t i=0; i<nb_grid_points; ++i)
-    emission_coeff[i] = aux::planckFunctionWavelength(
-                          atmosphere->temperature_gas[i], 
-                          spectral_grid->wavelength_list[nu]) 
-                      * atmosphere->absorption_coeff_gas[i][nu]
-                      + aux::planckFunctionWavelength(
-                          atmosphere->temperature_dust[i], 
-                          spectral_grid->wavelength_list[nu]) 
-                      * atmosphere->absorption_coeff_dust[i][nu];
-
-  aux::TriDiagonalMatrix m(nb_grid_points);
-  std::vector<double> rhs(nb_grid_points, 0.);
+  //per-thread reusable matrix / scratch (called inside omp-parallel-over-nu)
+  static thread_local aux::TriDiagonalMatrix m(0);
+  static thread_local std::vector<double> rhs;
+  static thread_local std::vector<double> result;
+  m.resize(nb_grid_points);
+  rhs.assign(nb_grid_points, 0.);
 
   if (config->use_spline_discretisation)
     assembleMomentSystemSpline(
@@ -83,7 +80,7 @@ void RadiativeTransfer::solveMomentSystem(
       rhs);
 
 
-  std::vector<double> result = m.solve(rhs);
+  m.solveInto(rhs, result);
 
   for (size_t i=0; i<nb_grid_points; ++i)
   {
@@ -100,12 +97,15 @@ void RadiativeTransfer::solveMomentSystem(
 }
 
 
-std::vector<double> RadiativeTransfer::generateXGrid(
+const std::vector<double>& RadiativeTransfer::generateXGrid(
   const std::vector<double>& extinction_coeff,
   const std::vector<double>& radius,
   const std::vector<double>& sphericality_factor)
 {
-  std::vector<double> x_grid(nb_grid_points, 0.);
+  //per-thread reusable buffer (callers are inside omp-parallel-over-nu regions)
+  static thread_local std::vector<double> x_grid;
+  x_grid.resize(nb_grid_points);
+  x_grid[nb_grid_points-1] = 0.;
 
   for (int i=nb_grid_points-2; i>-1; --i)
   {
@@ -135,7 +135,8 @@ void RadiativeTransfer::assembleMomentSystemSpline(
   aux::TriDiagonalMatrix& m,
   std::vector<double>& rhs)
 {
-  std::vector<double> a(nb_grid_points, 0.);
+  static thread_local std::vector<double> a;
+  a.assign(nb_grid_points, 0.);
 
   for (size_t i=0; i<nb_grid_points; ++i)
     a[i] = eddington_factor[i] * sphericality_factor[i] * radius2[i];
@@ -184,19 +185,23 @@ void RadiativeTransfer::calcFlux(
   const std::vector<double>& radius2,
   const std::vector<double>& source_function)
 {
-  const std::vector<double> x_grid = generateXGrid(
-    extinction_coeff[nu], 
+  const std::vector<double>& x_grid = generateXGrid(
+    extinction_coeff[nu],
     radius,
     sphericality_factor[nu]);
 
-  std::vector<double> mean_intensity(nb_grid_points, 0);
+  //per-thread reusable scratch (called inside omp-parallel-over-nu)
+  static thread_local std::vector<double> mean_intensity;
+  static thread_local aux::TriDiagonalMatrix m(0);
+  static thread_local std::vector<double> rhs;
+  static thread_local std::vector<double> result;
+  mean_intensity.resize(nb_grid_points);
+  m.resize(nb_grid_points);
+  rhs.assign(nb_grid_points, 0.);
 
   for (size_t i=0; i<nb_grid_points; ++i)
     mean_intensity[i] = radiation_field[i].mean_intensity[nu];
 
-  aux::TriDiagonalMatrix m(nb_grid_points);
-  std::vector<double> rhs(nb_grid_points, 0.);
-  
   if (config->use_spline_discretisation)
     assembleMomentSystemFluxSpline(
       x_grid,
@@ -218,7 +223,7 @@ void RadiativeTransfer::calcFlux(
       m,
       rhs);
 
-  std::vector<double> result = m.solve(rhs);
+  m.solveInto(rhs, result);
 
   for (size_t i=0; i<nb_grid_points; ++i)
   {
@@ -240,7 +245,8 @@ void RadiativeTransfer::assembleMomentSystemFluxSpline(
   aux::TriDiagonalMatrix& m,
   std::vector<double>& rhs)
 {
-  std::vector<double> a(nb_grid_points, 0.);
+  static thread_local std::vector<double> a;
+  a.assign(nb_grid_points, 0.);
 
   for (size_t i=0; i<nb_grid_points; ++i)
     a[i] = eddington_factor[i] * sphericality_factor[i] * radius2[i] * mean_intensity[i];
@@ -292,7 +298,8 @@ void RadiativeTransfer::assembleMomentSystemTaylor(
 {
   const double hr = x_grid[1] - x_grid.front();
 
-  std::vector<double> a(nb_grid_points, 0.);
+  static thread_local std::vector<double> a;
+  a.assign(nb_grid_points, 0.);
 
   for (size_t i=0; i<nb_grid_points; ++i)
     a[i] = eddington_factor[i] * sphericality_factor[i] * radius2[i];
@@ -340,7 +347,8 @@ void RadiativeTransfer::assembleMomentSystemFluxTaylor(
   aux::TriDiagonalMatrix& m,
   std::vector<double>& rhs)
 {
-  std::vector<double> a(nb_grid_points, 0.);
+  static thread_local std::vector<double> a;
+  a.assign(nb_grid_points, 0.);
 
   for (size_t i=0; i<nb_grid_points; ++i)
     a[i] = eddington_factor[i] * sphericality_factor[i] * radius2[i];

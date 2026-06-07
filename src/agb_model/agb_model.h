@@ -41,10 +41,29 @@ class AGBStarModel{
     TemperatureCorrection temperature_correction;
     Hydrodynamics hydrodynamics;
   protected:
+    //persistent state for the radiative-equilibrium temperature iteration
+    unsigned int temp_iter_count = 0;
+    double prev_max_rel_change = 1e30;                         //last applied max |dT|/T
+    bool anderson_was_active = false;                          //activation-edge tracker
+    std::vector<double> relaxation_gas, relaxation_dust;       //per-layer omega
+    std::vector<double> prev_delta_b_gas, prev_delta_b_dust;   //previous delta_B
+    std::vector<std::vector<double>> anderson_x_gas, anderson_f_gas;   //T and residual history
+    std::vector<std::vector<double>> anderson_x_dust, anderson_f_dust;
+
     bool temperatureIteration();
     bool chemistryDustIteration();
     bool chemistryHydroIteration();
     void radiativeTransfer();
+
+    //Anderson mixing on a temperature profile. x_k is the current profile, f_k the
+    //relaxed correction (so G(x_k) = x_k + f_k). Pushes the pair onto the history,
+    //trims to the window, and returns the accelerated next profile.
+    std::vector<double> andersonStep(
+      std::vector<std::vector<double>>& x_history,
+      std::vector<std::vector<double>>& f_history,
+      const std::vector<double>& x_k,
+      const std::vector<double>& f_k);
+
     std::pair<double, size_t> checkFluxConvergence();
     std::pair<double, size_t> checkConvergence(
       const std::vector<double>& old_data,

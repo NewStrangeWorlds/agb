@@ -127,7 +127,7 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::getline(file, line);
   std::getline(file, line);
   file >> nb_temperature_iter >> temperature_convergence >> temperature_max_change;
-
+  
   std::getline(file, line);
   std::getline(file, line);
   std::getline(file, line);

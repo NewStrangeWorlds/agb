@@ -88,20 +88,19 @@ void RadiativeTransfer::createZGrids()
 //calculate the optical depth along an impact parameter from 
 //the outside towards the inside
 //uses a trapezoidal rule
-std::vector<double> ImpactParam::opticalDepth(
-  const std::vector<double>& extinction_coeff)
+void ImpactParam::opticalDepth(
+  const std::vector<double>& extinction_coeff,
+  std::vector<double>& optical_depth)
 {
-  std::vector<double> optical_depth(nb_z_points, 0.0);
-  
+  optical_depth[nb_z_points-1] = 0.0;
+
   for (int i=nb_z_points-2; i>-1; --i)
   {
-    double q = -(z_grid[i].radius - z_grid[i+1].radius) 
-               * (extinction_coeff[z_grid[i].radius_index] 
+    double q = -(z_grid[i].radius - z_grid[i+1].radius)
+               * (extinction_coeff[z_grid[i].radius_index]
                 + extinction_coeff[z_grid[i+1].radius_index]) / 2.0;
     optical_depth[i] = optical_depth[i+1] + q;
   }
-
-  return optical_depth;
 }
 
 
@@ -214,19 +213,26 @@ void ImpactParam::solveRadiativeTransfer(
   }
 
 
-  std::vector<double> optical_depth = opticalDepth(
-    extinction_coeff);
-   
-  std::vector<double> source_function_z;
-  source_function_z.reserve(nb_z_points);
+  //per-thread reusable scratch. The spectral loop is parallelised over nu and a
+  //single thread solves all impact parameters for its nu sequentially, so one set
+  //of buffers per thread suffices. resize() keeps capacity once the largest ray
+  //(nb_z_points == nb_grid_points) has been seen, so later rays do not allocate.
+  static thread_local std::vector<double> optical_depth;
+  static thread_local std::vector<double> source_function_z;
+  static thread_local std::vector<double> rhs;
+  static thread_local std::vector<double> u;
+  static thread_local aux::TriDiagonalMatrix M(0);
 
-  for (auto & z : z_grid)
-    source_function_z.push_back(source_function[z.radius_index]);
+  optical_depth.resize(nb_z_points);
+  opticalDepth(extinction_coeff, optical_depth);
 
+  source_function_z.resize(nb_z_points);
+  for (size_t i=0; i<nb_z_points; ++i)
+    source_function_z[i] = source_function[z_grid[i].radius_index];
 
-  aux::TriDiagonalMatrix M(nb_z_points);
-  std::vector<double> rhs(nb_z_points, 0.);
-  
+  M.resize(nb_z_points);
+  rhs.resize(nb_z_points);
+
   if (use_spline_discretisation)
    assembleSystemSpline(
       optical_depth,
@@ -246,7 +252,7 @@ void ImpactParam::solveRadiativeTransfer(
       M,
       rhs);
 
-  std::vector<double> u = M.solve(rhs);
+  M.solveInto(rhs, u);
 
   for (size_t i=0; i<nb_z_points; ++i)
   {

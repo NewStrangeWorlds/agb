@@ -84,6 +84,8 @@ void Hydrodynamics::calcWindVelocity()
 
   int critical_point = findCriticalPoint();
 
+  dumpCriticalPointDebug(flux_weighted_extinction, critical_point);
+
   //a valid transonic wind solution requires the critical point to lie in the
   //interior. If the search hit a boundary (e.g. a transiently super-Eddington
   //alpha during the iteration), the wind equation has no transonic solution and
@@ -687,12 +689,74 @@ int Hydrodynamics::findCriticalPoint()
                                 + sound_speed_derivative[i];
   }
 
-  int i = 0;
+  // int i = 0;
 
+  // while (i < nb_grid_points-1 && phi_deriv[i] > 0 && alpha[i] < 0.5)
+  //    ++i;
+
+  int i = 0;
+  // 1) skip the inner region until radiative driving is significant  
+  while (i < nb_grid_points-1 && alpha[i] < 0.5)
+     ++i;
+  // 2) from there, find the first regularity crossing
   while (i < nb_grid_points-1 && phi_deriv[i] > 0)
      ++i;
 
   return i;
+}
+
+
+
+void Hydrodynamics::dumpCriticalPointDebug(
+  const std::vector<double>& flux_weighted_extinction,
+  const int critical_point)
+{
+  ++wind_call_count;
+
+  //full per-gridpoint dump when the critical point is anomalously inner or jumped
+  //sharply from the previous call; otherwise just a one-line summary
+  const bool jumped = prev_critical_point >= 0
+                    && std::abs(critical_point - prev_critical_point) > 10;
+  const bool inner  = critical_point >= 0 && critical_point < 30;
+
+  const std::string path = config->model_folder + "hydro_debug.dat";
+  std::ofstream file(path.c_str(), std::ios::app);
+
+  if (file.is_open())
+  {
+    file << std::setprecision(8) << std::scientific;
+    file << "# call " << wind_call_count
+         << "  critical_point " << critical_point
+         << "  (prev " << prev_critical_point << ")"
+         << (jumped ? "  <<< JUMP" : "")
+         << (inner  ? "  <<< INNER" : "") << "\n";
+
+    if (jumped || inner)
+    {
+      file << "# i\tr/R*\tT_gas\trho\tcs2\talpha\tchi_F\tgrav\tsound1\tsound2\tphi_deriv\n";
+
+      const double gm = constants::gravitation_const * config->stellar_mass;
+
+      for (size_t k=0; k<nb_grid_points; ++k)
+      {
+        const double r   = atmosphere->radius[k];
+        const double cs2 = isothermal_sound_speed[k]*isothermal_sound_speed[k];
+        const double grav   = gm/(r*r) * (1. - alpha[k]);
+        const double sound1 = -2.*cs2/r;
+        const double sound2 = sound_speed_derivative[k];
+
+        file << k << "\t" << atmosphere->radius_grid[k] << "\t"
+             << atmosphere->temperature_gas[k] << "\t"
+             << atmosphere->mass_density[k] << "\t"
+             << cs2 << "\t" << alpha[k] << "\t" << flux_weighted_extinction[k] << "\t"
+             << grav << "\t" << sound1 << "\t" << sound2 << "\t"
+             << (grav + sound1 + sound2) << "\n";
+      }
+      file << "\n";
+    }
+  }
+
+  prev_critical_point = critical_point;
 }
 
 

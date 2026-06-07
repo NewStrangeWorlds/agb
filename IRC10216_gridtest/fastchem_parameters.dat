@@ -1,0 +1,17 @@
+#element abundance file   
+fastchem_data/lodders_2003_enhanced_o.dat
+
+#species data file    
+fastchem_data/logK.dat
+
+#accuracy of chemistry iteration
+1.0e-5
+
+#accuracy of element conservation
+1.0e-4
+
+#max number of chemistry iterations 
+80000  
+
+#max number internal solver iterations
+20000

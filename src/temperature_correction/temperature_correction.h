@@ -25,11 +25,17 @@ class TemperatureCorrection{
       , radiation_field(radiation_field_) {}
     ~TemperatureCorrection() {}
 
+    //Computes one relaxed temperature correction (delta T) for the given profile.
+    //relaxation and prev_delta_b carry the per-layer adaptive under-relaxation
+    //factor omega and the previous (unrelaxed) Planck correction across calls;
+    //they are resized/initialised on first use and updated in place.
     std::vector<double> calculate(
       std::vector<double>& temperature,
       std::vector<double>& radius,
       std::vector<std::vector<double>>& extinction_coeff,
-      std::vector<std::vector<double>>& absorption_coeff);
+      std::vector<std::vector<double>>& absorption_coeff,
+      std::vector<double>& relaxation,
+      std::vector<double>& prev_delta_b);
   protected:
     ModelConfig* config;
     SpectralGrid* spectral_grid;
@@ -46,6 +52,8 @@ class TemperatureCorrection{
       std::vector<double>& kappa_b,
       std::vector<double>& planck_function_int);
 
+    //Returns the Planck-integrated correction delta_B per layer (not yet converted
+    //to a temperature change).
     std::vector<double> unsoeldLucyCorrection(
       const std::vector<double>& temperature,
       const std::vector<double>& radius,
@@ -54,6 +62,10 @@ class TemperatureCorrection{
       const std::vector<double>& kappa_j,
       const std::vector<double>& kappa_b,
       const std::vector<double>& planck_function_int);
+
+    //1-2-1 filter applied to the correction (not the profile), so it vanishes at
+    //convergence and cannot diffuse the converged solution.
+    void smoothCorrection(std::vector<double>& correction);
 
     std::vector<double> lambdaIteration(
       const std::vector<double>& temperature,

@@ -48,6 +48,18 @@ class Hydrodynamics{
     double velocity_relaxation = 0.25;
     double prev_velocity_residual = -1.;
 
+    //diagnostics for the critical-point search (see dumpCriticalPointDebug)
+    unsigned int wind_call_count = 0;
+    int prev_critical_point = -1;
+
+    //append a per-gridpoint breakdown of the wind-equation numerator phi_deriv
+    //(gravity, radiative alpha, sound-speed terms) to <model>/hydro_debug.dat
+    //whenever the critical point lands in the inner region or jumps sharply, so a
+    //spurious inner critical point is fully captured for later inspection.
+    void dumpCriticalPointDebug(
+      const std::vector<double>& flux_weighted_extinction,
+      const int critical_point);
+
     ModelConfig* config;
     SpectralGrid* spectral_grid;
     Atmosphere* atmosphere;

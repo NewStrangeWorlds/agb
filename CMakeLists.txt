@@ -25,6 +25,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "-Wall -pedantic -MMD")
 set(CMAKE_C_FLAGS "-Wall -pedantic -MMD")
 
+#Release codegen: keep the default -O3 -DNDEBUG and add loop unrolling for the
+#tight radiative-transfer kernels. Do NOT add -march=native here: FastChem's
+#Eigen breaks under it (see project memory). -ffast-math is also intentionally
+#omitted to keep results bit-stable.
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -funroll-loops")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -funroll-loops")
+
 set(CMAKE_BUILD_TYPE Release)
 
 #output directories

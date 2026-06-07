@@ -60,8 +60,9 @@ class ImpactParam{
       const std::vector<double>& extinction_coeff,
       const std::vector<double>& source_function);
   private:
-    std::vector<double> opticalDepth(
-      const std::vector<double>& extinction_coeff);
+    void opticalDepth(
+      const std::vector<double>& extinction_coeff,
+      std::vector<double>& optical_depth);
     void assembleSystemTaylor(
       const std::vector<double>& optical_depth,
       const std::vector<double>& source_function,
@@ -162,14 +163,23 @@ class RadiativeTransfer{
     std::vector<std::vector<double>> extinction_coeff;
     std::vector<std::vector<double>> scattering_coeff;
 
+    //Iteration-invariant thermal emission (absorption-weighted Planck) per
+    //spectral point and grid point: absorption_gas*B(T_gas) + absorption_dust*B(T_dust).
+    //Temperature and opacities do not change during a single RT solve, so this is
+    //computed once per solveRadiativeTransfer instead of every iteration.
+    //Indexed [nu][grid_point].
+    std::vector<std::vector<double>> planck_emission;
+
     void createImpactParameterGrid();
     void createZGrids();
+
+    void precomputeEmission();
 
     void calcEddingtonFactors();
     void calcSphericalityFactor();
     
     double boundaryFluxCorrection();
-    std::vector<double> sourceFunction(const int nu);
+    const std::vector<double>& sourceFunction(const int nu);
 
     void solveMomentSystem(
       const size_t nu,
@@ -177,7 +187,7 @@ class RadiativeTransfer{
       const std::vector<double>& radius2,
       const double boundary_planck_derivative,
       const double boundary_flux_correction);
-    std::vector<double> generateXGrid(
+    const std::vector<double>& generateXGrid(
       const std::vector<double>& extinction_coeff,
       const std::vector<double>& radius,
       const std::vector<double>& sphericality_factor);
