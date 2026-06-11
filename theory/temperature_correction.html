@@ -1,0 +1,567 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Gas-phase chemistry (FastChem)" href="chemistry.html"><link rel="prev" title="Radiative transfer" href="radiative_transfer.html">
+        <link rel="prefetch" href="../_static/agb-icon-512.png" as="image">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Radiative-equilibrium temperature correction - AGB Dust-Driven Wind Model</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">AGB Dust-Driven Wind Model</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/agb-icon-512.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">AGB Dust-Driven Wind Model</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation and building</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../running.html">Running a model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration (config.toml)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory and modelling</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Theory and modelling</a><input aria-label="Toggle navigation of Theory and modelling" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Implementation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/modules.html">Source tree guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/io_formats.html">File formats</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/theory/temperature_correction.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="radiative-equilibrium-temperature-correction">
+<h1>Radiative-equilibrium temperature correction<a class="headerlink" href="#radiative-equilibrium-temperature-correction" title="Link to this heading">¶</a></h1>
+<p><em>Module:</em> <code class="docutils literal notranslate"><span class="pre">src/temperature_correction/</span></code> —
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::TemperatureCorrection</span></code>.</p>
+<p>The temperature structure is fixed by <strong>radiative equilibrium</strong>, not by an
+energy equation.  Two correctors are implemented and can be combined in a
+two-phase scheme:</p>
+<ol class="arabic simple">
+<li><p>the <strong>Unsöld–Lucy</strong> correction — a robust, approximate fixed-point update;</p></li>
+<li><p>the <strong>full-linearisation</strong> (Newton) correction — an exact-Jacobian step that
+removes the Unsöld–Lucy accuracy floor.</p></li>
+</ol>
+<p>Both correct the <strong>gas</strong> and the <strong>dust</strong> temperatures independently, each toward
+its own local radiative-equilibrium condition <a class="reference internal" href="governing_equations.html#equation-re-balance">Eq. 2</a>.</p>
+<section id="why-two-temperatures">
+<h2>Why two temperatures<a class="headerlink" href="#why-two-temperatures" title="Link to this heading">¶</a></h2>
+<p>Gas and dust exchange energy with the radiation field through <em>different</em>
+opacities (molecular/atomic lines and continua for the gas; the amorphous-carbon
+Mie opacity for the dust) and are not collisionally locked in the thin outer
+wind.  Each component therefore has its own radiative-equilibrium temperature:
+the energy-balance condition <a class="reference internal" href="governing_equations.html#equation-re-balance">Eq. 2</a> is solved separately for
+<span class="math notranslate nohighlight">\(T_\mathrm{gas}\)</span> (with <span class="math notranslate nohighlight">\(\kappa_{\nu,\mathrm{gas}}\)</span>) and
+<span class="math notranslate nohighlight">\(T_\mathrm{dust}\)</span> (with <span class="math notranslate nohighlight">\(\kappa_{\nu,\mathrm{dust}}\)</span>), sharing the
+<strong>same</strong> radiation field <span class="math notranslate nohighlight">\(J_\nu\)</span>.</p>
+</section>
+<section id="unsoldlucy-correction">
+<h2>Unsöld–Lucy correction<a class="headerlink" href="#unsoldlucy-correction" title="Link to this heading">¶</a></h2>
+<p><em>Method:</em> <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::TemperatureCorrection::calculate()</span></code>.</p>
+<p>The Unsöld–Lucy scheme produces a Planck-integrated correction
+<span class="math notranslate nohighlight">\(\Delta B\)</span> per layer from a combination of the <strong>local</strong> energy-balance
+residual and the <strong>non-local</strong> flux-constancy residual, weighted by the
+absorption-, Planck- and flux-mean opacities (<code class="docutils literal notranslate"><span class="pre">calcIntegratedQuantities</span></code>
+assembles <span class="math notranslate nohighlight">\(f q J\)</span>, <span class="math notranslate nohighlight">\(q\chi H\)</span>, <span class="math notranslate nohighlight">\(\kappa_J\)</span>, <span class="math notranslate nohighlight">\(\kappa_B\)</span> and
+the integrated Planck function).  The correction is converted to a temperature
+change through an <strong>exact</strong> <span class="math notranslate nohighlight">\(T^4\)</span> (Planck) update rather than a linearised
+one.</p>
+<p>The scheme is only first-order accurate and leaves a residual <strong>accuracy
+floor</strong> (a few × <span class="math notranslate nohighlight">\(10^{-3}\)</span> in the energy balance, ~2 % in flux
+conservation for this problem).  It is, however, very robust far from
+convergence, which is exactly where it is used.</p>
+</section>
+<section id="the-decisive-subtlety-the-ratio-form-of-the-constraint">
+<span id="temp-ratio-form"></span><h2>The decisive subtlety: the <strong>ratio</strong> form of the constraint<a class="headerlink" href="#the-decisive-subtlety-the-ratio-form-of-the-constraint" title="Link to this heading">¶</a></h2>
+<p>Both correctors enforce local radiative equilibrium in <strong>ratio</strong> form
+(thesis 3.40/3.41), per species <span class="math notranslate nohighlight">\(s\)</span>:</p>
+<div class="math-wrapper docutils container" id="equation-re-ratio">
+<div class="math notranslate nohighlight" id="equation-re-ratio">
+<span class="eqno">(1)<a class="headerlink" href="#equation-re-ratio" title="Link to this equation">¶</a></span>\[g_s = \frac{\displaystyle\sum_\nu w_\nu\,\kappa_{\nu,s}\,J_\nu}
+           {\displaystyle\sum_\nu w_\nu\,\kappa_{\nu,s}\,B_\nu(T_s)} - 1 = 0 ,\]</div>
+</div>
+<p><strong>not</strong> the difference form
+<span class="math notranslate nohighlight">\(\sum_\nu w_\nu\kappa_{\nu,s}(J_\nu-B_\nu)\)</span>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This choice is essential for the linearisation.  The difference-form integrals
+span many decades with depth, so the dense Newton matrix becomes
+catastrophically ill-scaled (deep rows huge, thin rows tiny) and produces
+garbage — uniform unresolved residuals, wild dust-front swings, and a flux
+that bulges in the interior.  Dividing each species row by its denominator
+<span class="math notranslate nohighlight">\(\mathrm{den}_{s,i}=\sum_\nu w_\nu\kappa_{\nu,s}B_\nu\)</span> makes <strong>every row
+:math:`O(1)`</strong>, and the Newton solve is well conditioned.</p>
+</div>
+</section>
+<section id="full-linearisation-newton-correction">
+<h2>Full-linearisation (Newton) correction<a class="headerlink" href="#full-linearisation-newton-correction" title="Link to this heading">¶</a></h2>
+<p><em>Method:</em> <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::TemperatureCorrection::linearisedCorrection()</span></code>
+(<code class="docutils literal notranslate"><span class="pre">temperature_correction_linearisation.cpp</span></code>), with the RT half supplied by
+<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::RadiativeTransfer::buildLinearisedMomentSystem()</span></code>.</p>
+<p>One Newton step is taken on <span class="math notranslate nohighlight">\((T_\mathrm{gas}, T_\mathrm{dust})\)</span> with the
+converged RT operator <strong>frozen</strong> (Eddington/sphericality factors, opacities,
+geometry).  The key point is that the intensity response is the <strong>exact</strong> moment-
+system response, not the <span class="math notranslate nohighlight">\(\tau\)</span>-weighted Unsöld–Lucy heuristic.</p>
+<p>Per frequency, the moment system <span class="math notranslate nohighlight">\(V_\nu J_\nu = \mathrm{rhs}_\nu(T)\)</span> is
+re-assembled with the same Taylor stencil used in the RT solve, so the intensity
+response to a temperature change is</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\delta J_\nu = V_\nu^{-1}\bigl(K_\nu + S_g\,\delta T_g + S_d\,\delta T_d\bigr),
+\qquad
+S_{s,i} = \frac{\partial\,\mathrm{rhs}_i}{\partial T_{s,i}}
+        = -c_i\,\kappa_{\mathrm{abs},s}\,\frac{\mathrm{d}B}{\mathrm{d}T},\]</div>
+</div>
+<p>with <span class="math notranslate nohighlight">\(c_i=r_i^2/(q_i\chi_i)\)</span> and the residual
+<span class="math notranslate nohighlight">\(K_\nu=\mathrm{rhs}_\nu - V_\nu J_\nu\)</span>.  The diagonal (in the Taylor
+discretisation) source derivatives make <span class="math notranslate nohighlight">\(S_{s}\)</span> cheap.</p>
+<p>The mean intensities are eliminated <strong>Rybicki-style</strong> — solving <span class="math notranslate nohighlight">\(V_\nu\)</span>
+against each unit node vector gives the inverse columns — collapsing the problem
+to a dense <span class="math notranslate nohighlight">\(2D\times2D\)</span> temperature system (<span class="math notranslate nohighlight">\(D=\)</span> number of grid
+points, factor 2 for gas+dust), solved by Gaussian elimination.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The frequency reduction into the dense Newton matrix uses a <strong>deterministic</strong>
+(static-scheduled, ascending-thread-order) reduction.  An earlier
+arrival-order reduction summed the ~5000 frequencies in a different order each
+run, perturbing the matrix at the <span class="math notranslate nohighlight">\(10^{-15}\)</span> level; amplified by the
+stiff dust-nucleation coupling this changed the iteration count run-to-run
+(same solution).  The reduction is now bit-reproducible at a fixed thread
+count.</p>
+</div>
+</section>
+<section id="local-re-alone-is-not-enough-the-flux-constancy-term">
+<h2>Local RE alone is not enough: the flux-constancy term<a class="headerlink" href="#local-re-alone-is-not-enough-the-flux-constancy-term" title="Link to this heading">¶</a></h2>
+<p>A frozen-structure test revealed that driving the <strong>local</strong> RE residual
+<a class="reference internal" href="#equation-re-ratio">Eq. 1</a> to zero does <strong>not</strong> conserve the flux: in the optically thick
+interior local RE is degenerate (<span class="math notranslate nohighlight">\(J\approx B\)</span> regardless of <span class="math notranslate nohighlight">\(T\)</span>), so
+the Newton converges without pinning the flux (<span class="math notranslate nohighlight">\(r^2 H\)</span> bulged by ~13 %).</p>
+<p>The fix is the <strong>composite</strong> constraint (thesis §3.2.4, eq. 3.64/3.65): per
+species,</p>
+<div class="math-wrapper docutils container" id="equation-composite-constraint">
+<div class="math notranslate nohighlight" id="equation-composite-constraint">
+<span class="eqno">(2)<a class="headerlink" href="#equation-composite-constraint" title="Link to this equation">¶</a></span>\[\xi\,\underbrace{g_{\text{local},s}}_{\text{local-RE ratio}}
+\;+\;
+\zeta(r)\,\underbrace{g_{\text{flux},s}}_{\text{flux constancy}} = 0 ,\]</div>
+</div>
+<p>with the flux-constancy residual written in the <strong>integrated (eq. 2.59)</strong> form</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[g_{\text{flux},i} = \frac{1}{r_\star^2 H_\star}
+\int_{r_1}^{r_i} r'^2\,\Bigl[\textstyle\sum_\nu w_\nu\bigl(
+\kappa_g (J_\nu-B_g) + \kappa_d (J_\nu-B_d)\bigr)\Bigr]\,\mathrm{d}r' .\]</div>
+</div>
+<p>Because the divergence of this integral is exactly the local-balance source that
+<code class="docutils literal notranslate"><span class="pre">solveMomentSystem</span></code> discretises (eq. 2.61 = eq. 2.59 in <span class="math notranslate nohighlight">\(X\)</span>-coordinates),
+the flux term is <strong>consistent</strong> with the <span class="math notranslate nohighlight">\(J\)</span>-solve and does not fight local
+RE — and the radial integral with the <span class="math notranslate nohighlight">\(1/(r_\star^2 H_\star)\)</span>
+normalisation keeps it <span class="math notranslate nohighlight">\(O(1)\)</span>-scaled.</p>
+<p>The depth weight is <span class="math notranslate nohighlight">\(\zeta(r)=\tau/(\tau+\tau_\mathrm{scale})\)</span>, built from a
+grey radial optical depth (flux-mean extinction integrated inward): <span class="math notranslate nohighlight">\(\zeta
+\to1\)</span> deep where flux constancy must dominate, <span class="math notranslate nohighlight">\(\zeta\to0\)</span> at the thin
+outer edge where the flux derivative is numerically noisy (and forced to 0 at the
+two boundary nodes).  The weights are <code class="docutils literal notranslate"><span class="pre">linearisation_xi</span></code> (<span class="math notranslate nohighlight">\(\xi\)</span>, ≈1) and
+<code class="docutils literal notranslate"><span class="pre">linearisation_zeta_tau_scale</span></code>.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>Only the <strong>integrated (eq. 2.59)</strong> flux operator works.  Linearising the
+node-centred eq. 2.58 (transport) flux fails — its discrete divergence is
+inconsistent with the <span class="math notranslate nohighlight">\(J\)</span>-solve stencil and the composite Jacobian
+cancels where the two constraints pull oppositely (determinant → 0,
+divergence).  The flux term is applied on the <strong>gas row only</strong> (dust keeps
+pure local RE) to avoid gas/dust collinearity.</p>
+</div>
+</section>
+<section id="two-phase-corrector-and-coupled-loop-stability">
+<h2>Two-phase corrector and coupled-loop stability<a class="headerlink" href="#two-phase-corrector-and-coupled-loop-stability" title="Link to this heading">¶</a></h2>
+<p><em>Driver:</em> <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::AGBStarModel::temperatureIteration()</span></code>.</p>
+<p>The frozen-opacity Newton step over-corrects far from convergence — the dust
+nucleation rate <span class="math notranslate nohighlight">\(J_\star\sim\exp(-/T)\)</span> is so temperature-sensitive that a
+frozen-opacity step badly mispredicts the dust response.  Two mechanisms keep the
+coupled iteration stable:</p>
+<ol class="arabic simple">
+<li><p><strong>Two-phase start.</strong>  Unless told otherwise
+(<code class="docutils literal notranslate"><span class="pre">linearisation_start_unsoeld_lucy</span></code>), the iteration begins with Unsöld–Lucy
+and <strong>latches</strong> onto the linearisation only once, for
+<code class="docutils literal notranslate"><span class="pre">linearisation_switch_count</span></code> consecutive steps, both the per-step
+<code class="docutils literal notranslate"><span class="pre">max|dT|/T</span></code> has settled below
+<code class="docutils literal notranslate"><span class="pre">linearisation_switch_dt_fraction</span> <span class="pre">×</span> <span class="pre">max_relative_change</span></code> <strong>and</strong> the maximum
+RE residual is below <code class="docutils literal notranslate"><span class="pre">linearisation_switch_re_residual</span></code>.  The switch is
+one-way (no revert).</p></li>
+<li><p><strong>Per-layer adaptive under-relaxation of the Newton step.</strong>  In the coupled
+loop the structure (dust, hydro) updates between temperature steps, so a full
+Newton step can drive a period-2 ±cap limit cycle just beyond the dust front.
+The Newton <span class="math notranslate nohighlight">\(\Delta T\)</span> is damped with the same adaptive scheme as
+Unsöld–Lucy: a per-layer factor <span class="math notranslate nohighlight">\(\omega\)</span> halved on a sign flip and grown
+back when the step keeps its sign, <strong>applied after the per-step cap</strong> so the
+damping is visible even while the cap binds.  A global
+<code class="docutils literal notranslate"><span class="pre">linearisation_relaxation</span></code> (default 0.5) further under-relaxes the step.</p></li>
+</ol>
+<p>The step order in <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">temperatureIteration()</span></code> is, deliberately:</p>
+<ol class="arabic simple">
+<li><p>compute the raw correction (UL or linearisation);</p></li>
+<li><p>(linearisation) per-layer adaptive damping;</p></li>
+<li><p>(UL only, and only in the settling regime) Anderson acceleration;</p></li>
+<li><p>optional monotonicity clip;</p></li>
+<li><p><strong>cap</strong> <span class="math notranslate nohighlight">\(|\Delta T|\le\)</span> <code class="docutils literal notranslate"><span class="pre">max_relative_change</span></code> <span class="math notranslate nohighlight">\(\times T\)</span>
+<strong>last</strong>, and floor <span class="math notranslate nohighlight">\(T&gt;0\)</span>.</p></li>
+</ol>
+<p>Capping last guarantees that nothing (an Anderson overshoot, a monotonicity clip)
+produces a step larger than the bound the hydro–dust cycle tolerates.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Two historical oscillation bugs are worth recording, as they recur if the
+ordering is disturbed:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">force_monotonic</span></code> fought the correction (the clip cascaded the
+just-applied heating back down every step) → ±cap limit cycle.  Default off.</p></li>
+<li><p>The under-relaxation <span class="math notranslate nohighlight">\(\omega\)</span> was applied <strong>before</strong> the cap, so while
+the cap was binding the step stayed pinned at ±cap regardless of
+<span class="math notranslate nohighlight">\(\omega\)</span> and an oscillating layer never damped.  Fix: cap first, then
+multiply by <span class="math notranslate nohighlight">\(\omega\)</span>.</p></li>
+</ul>
+</div>
+</section>
+<section id="anderson-acceleration">
+<h2>Anderson acceleration<a class="headerlink" href="#anderson-acceleration" title="Link to this heading">¶</a></h2>
+<p>For the Unsöld–Lucy phase, Anderson mixing
+(<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::AGBStarModel::andersonStep()</span></code>) accelerates the slow creep toward
+radiative equilibrium.  It is gated to the <strong>settling regime</strong> only
+(<code class="docutils literal notranslate"><span class="pre">prev_max_rel_change</span> <span class="pre">&lt;</span> <span class="pre">anderson_activation_fraction</span> <span class="pre">×</span> <span class="pre">max_relative_change</span></code>),
+so the early large-change transient — to which the hydro cycle is sensitive —
+stays on plain damped steps, and the history is restarted fresh on activation so
+it is not seeded by the transient.  Anderson is bypassed once the linearisation
+is active (Newton already mixes).</p>
+</section>
+<section id="accuracy-achieved">
+<h2>Accuracy achieved<a class="headerlink" href="#accuracy-achieved" title="Link to this heading">¶</a></h2>
+<p>With the integrated flux term, the linearisation corrector reaches flux
+conservation at the <span class="math notranslate nohighlight">\(\sim10^{-5}\)</span> level on a frozen structure (versus the
+~2.3 % Unsöld–Lucy floor) and converges the coupled IRC+10216 model in ~20 outer
+iterations from a warm start.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="chemistry.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Gas-phase chemistry (FastChem)</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="radiative_transfer.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Radiative transfer</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Daniel Kitzmann, Joachim Stock
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Radiative-equilibrium temperature correction</a><ul>
+<li><a class="reference internal" href="#why-two-temperatures">Why two temperatures</a></li>
+<li><a class="reference internal" href="#unsoldlucy-correction">Unsöld–Lucy correction</a></li>
+<li><a class="reference internal" href="#the-decisive-subtlety-the-ratio-form-of-the-constraint">The decisive subtlety: the <strong>ratio</strong> form of the constraint</a></li>
+<li><a class="reference internal" href="#full-linearisation-newton-correction">Full-linearisation (Newton) correction</a></li>
+<li><a class="reference internal" href="#local-re-alone-is-not-enough-the-flux-constancy-term">Local RE alone is not enough: the flux-constancy term</a></li>
+<li><a class="reference internal" href="#two-phase-corrector-and-coupled-loop-stability">Two-phase corrector and coupled-loop stability</a></li>
+<li><a class="reference internal" href="#anderson-acceleration">Anderson acceleration</a></li>
+<li><a class="reference internal" href="#accuracy-achieved">Accuracy achieved</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=f26bd01d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>

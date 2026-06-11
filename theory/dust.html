@@ -1,0 +1,480 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Opacities (transport coefficients)" href="opacities.html"><link rel="prev" title="Gas-phase chemistry (FastChem)" href="chemistry.html">
+        <link rel="prefetch" href="../_static/agb-icon-512.png" as="image">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Dust formation (Gail &amp; Sedlmayr) - AGB Dust-Driven Wind Model</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">AGB Dust-Driven Wind Model</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/agb-icon-512.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">AGB Dust-Driven Wind Model</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation and building</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../running.html">Running a model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration (config.toml)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory and modelling</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Theory and modelling</a><input aria-label="Toggle navigation of Theory and modelling" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Implementation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/modules.html">Source tree guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/io_formats.html">File formats</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/theory/dust.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="dust-formation-gail-sedlmayr">
+<h1>Dust formation (Gail &amp; Sedlmayr)<a class="headerlink" href="#dust-formation-gail-sedlmayr" title="Link to this heading">¶</a></h1>
+<p><em>Module:</em> <code class="docutils literal notranslate"><span class="pre">src/dust/</span></code> — <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::GailSedlmayrDust</span></code> (derived from the
+abstract <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::DustSpecies</span></code>), with the thermochemistry in
+<code class="docutils literal notranslate"><span class="pre">gail_sedlmayr_thermo_functions.cpp</span></code>.  An <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::AnalyticDust</span></code>
+prescription is also available for testing.</p>
+<p>Carbon condenses out of the cooling, expanding gas into small amorphous-carbon
+grains.  The code follows the classical <strong>Gail &amp; Sedlmayr moment method</strong>:
+homogeneous nucleation of seed clusters followed by grain growth, tracked through
+the moments of the grain-size distribution.</p>
+<section id="the-moment-equations">
+<h2>The moment equations<a class="headerlink" href="#the-moment-equations" title="Link to this heading">¶</a></h2>
+<p>Let <span class="math notranslate nohighlight">\(K_j(r)\)</span> be the <span class="math notranslate nohighlight">\(j\)</span>-th moment of the grain-size distribution
+(number of monomers per grain to the power <span class="math notranslate nohighlight">\(j/3\)</span>), normalised per hydrogen
+nucleus.  In the stationary, spherically symmetric wind they obey the coupled
+system</p>
+<div class="math-wrapper docutils container" id="equation-dust-moments">
+<div class="math notranslate nohighlight" id="equation-dust-moments">
+<span class="eqno">(1)<a class="headerlink" href="#equation-dust-moments" title="Link to this equation">¶</a></span>\[\begin{split}v\,\frac{\mathrm{d}K_0}{\mathrm{d}r} &amp;= \frac{J_\star}{n_{\langle H\rangle}}, \\
+v\,\frac{\mathrm{d}K_j}{\mathrm{d}r} &amp;=
+\frac{j}{3}\,\frac{1}{\tau}\,K_{j-1}
++ N_\ell^{\,j/3}\,\frac{J_\star}{n_{\langle H\rangle}},
+\qquad j = 1,\dots,5 ,\end{split}\]</div>
+</div>
+<p>where</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(J_\star\)</span> is the <strong>stationary nucleation rate</strong> (seed clusters per unit
+volume and time),</p></li>
+<li><p><span class="math notranslate nohighlight">\(1/\tau\)</span> is the <strong>net monomer growth rate</strong> (so <span class="math notranslate nohighlight">\(\tau\)</span> is the
+grain-growth timescale),</p></li>
+<li><p><span class="math notranslate nohighlight">\(N_\ell\)</span> (<code class="docutils literal notranslate"><span class="pre">minimum_monomer_number</span></code> = 1000) is the lower cluster-size
+bound of the integration, and</p></li>
+<li><p><span class="math notranslate nohighlight">\(n_{\langle H\rangle}\)</span> is the hydrogen number density.</p></li>
+</ul>
+<p>The code integrates <strong>six</strong> moments (<span class="math notranslate nohighlight">\(K_0\dots K_5\)</span>).  Physically:
+<span class="math notranslate nohighlight">\(K_0\)</span> is the grain number density, and <span class="math notranslate nohighlight">\(K_3\)</span> is the <strong>condensed
+volume per hydrogen nucleus</strong> — i.e. the carbon locked into dust.  The mean grain
+radius follows from <span class="math notranslate nohighlight">\(\langle a\rangle = a_0\,(K_3/K_0)^{1/3}\)</span> with the
+monomer radius <span class="math notranslate nohighlight">\(a_0=1.28\times10^{-8}\,\mathrm{cm}\)</span>.</p>
+</section>
+<section id="nucleation-rate">
+<h2>Nucleation rate<a class="headerlink" href="#nucleation-rate" title="Link to this heading">¶</a></h2>
+<p>The nucleation rate is built from classical nucleation theory
+(<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">nucleationRate()</span></code>):</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[J_\star = c_0\,\beta\,A_\star\,Z ,\]</div>
+</div>
+<p>assembled from</p>
+<ul class="simple">
+<li><p>the <strong>supersaturation ratio</strong> <span class="math notranslate nohighlight">\(S(T,n_C)\)</span> and its logarithm
+(<code class="docutils literal notranslate"><span class="pre">saturationRatio</span></code>, <code class="docutils literal notranslate"><span class="pre">saturationVapourPressure</span></code>); nucleation is shut off
+(<span class="math notranslate nohighlight">\(J_\star\to0\)</span>) where <span class="math notranslate nohighlight">\(\ln S\le0\)</span>;</p></li>
+<li><p>the <strong>critical cluster size</strong> <span class="math notranslate nohighlight">\(n_\star\)</span> (<code class="docutils literal notranslate"><span class="pre">criticalClusterSize</span></code>);</p></li>
+<li><p>the <strong>free energy of cluster formation</strong> <span class="math notranslate nohighlight">\(\Delta F\)</span>
+(<code class="docutils literal notranslate"><span class="pre">freeEnergyOfFormation</span></code>), using the surface tension and the temperature
+scale <span class="math notranslate nohighlight">\(\theta_\infty=\sigma A_1/k_B\)</span>;</p></li>
+<li><p>the <strong>monomer growth rate</strong> onto the critical cluster <span class="math notranslate nohighlight">\(\beta\)</span>
+(<code class="docutils literal notranslate"><span class="pre">monomerGrowthRate</span></code>);</p></li>
+<li><p>the <strong>Zeldovich factor</strong> <span class="math notranslate nohighlight">\(Z\)</span> (<code class="docutils literal notranslate"><span class="pre">zeldovichFactor</span></code>);</p></li>
+<li><p>the <strong>equilibrium cluster distribution</strong> <span class="math notranslate nohighlight">\(c_0\)</span>
+(<code class="docutils literal notranslate"><span class="pre">equilibriumClusterDistribution</span></code>); and</p></li>
+<li><p>the critical-cluster surface area
+<span class="math notranslate nohighlight">\(A_\star = A_1 n_\star^{2/3}\)</span>.</p></li>
+</ul>
+<p>Growth is fed by collisions of the grains with the carbon-bearing species
+<span class="math notranslate nohighlight">\(\mathrm{C}, \mathrm{C_2}, \mathrm{C_2H}, \mathrm{C_2H_2}\)</span>, weighted by
+their sticking coefficients and thermal velocities (<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">growthRate()</span></code>).  The
+material constants (graphite/amorphous-carbon: surface tension
+<span class="math notranslate nohighlight">\(1400\,\mathrm{erg\,cm^{-2}}\)</span>, critical saturation ratio 3, sticking
+coefficients 0.37/0.34) are the Gail &amp; Sedlmayr (1984) values.</p>
+</section>
+<section id="carbon-depletion-in-a-single-causal-sweep">
+<span id="dust-depletion"></span><h2>Carbon depletion in a single causal sweep<a class="headerlink" href="#carbon-depletion-in-a-single-causal-sweep" title="Link to this heading">¶</a></h2>
+<p><em>The decisive physics:</em> the moment equations <a class="reference internal" href="#equation-dust-moments">Eq. 1</a> are integrated
+<strong>outward in one coupled RK4 sweep</strong> (<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::GailSedlmayrDust::calcDistribution()</span></code>),
+and at each radius the growth species that feed <strong>both</strong> <span class="math notranslate nohighlight">\(1/\tau\)</span> and
+<span class="math notranslate nohighlight">\(J_\star\)</span> are throttled by the <strong>running degree of condensation</strong></p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[f_c = \frac{K_3}{(\varepsilon_C-\varepsilon_O)\,n_{\langle H\rangle}/n_{\langle H\rangle}}
+     \;\equiv\; \frac{K_3}{c_\mathrm{cond}} ,
+\qquad
+\text{throttle factor } = 1 - f_c .\]</div>
+</div>
+<p>Both the (linear) growth rate and the (strongly nonlinear) nucleation rate are
+evaluated from the <strong>depleted</strong> densities <span class="math notranslate nohighlight">\(n\cdot(1-f_c)\)</span>, so condensation
+<strong>self-limits</strong> as carbon is consumed.  Because the sweep marches outward and
+<span class="math notranslate nohighlight">\(K_3\)</span> only grows, <span class="math notranslate nohighlight">\(f_c\)</span> rises monotonically, the throttle decreases
+smoothly, and there is <strong>no oscillation</strong> and no outer fixed-point iteration.</p>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>This differential, in-sweep depletion (Gail &amp; Sedlmayr book §14.3; Winters
+thesis Eq. 5.4) was the missing physics that earlier caused the dust opacity —
+and hence the radiative acceleration <span class="math notranslate nohighlight">\(\alpha\)</span> — to grow without bound,
+collapsing the wind into a spurious “converged” state.  With it in place the
+self-consistent eigenvalue mass-loss rate for IRC+10216 settles at
+<span class="math notranslate nohighlight">\(\dot{M}\approx7.8\times10^{-5}\,M_\odot\,\mathrm{yr}^{-1}\)</span> (a ~3 %
+match to the observed value), with a degree of condensation
+<span class="math notranslate nohighlight">\(f_c\approx0.13\)</span>.</p>
+</div>
+<p>The integration detail: gas-phase densities, the growth timescale and the
+hydrogen density are interpolated to the RK4 midpoints (logarithmically for
+positive-definite quantities, linearly for temperature/velocity); the moments are
+seeded to zero at the inner boundary (no dust there).  After the sweep the
+moments are de-normalised by <span class="math notranslate nohighlight">\(n_{\langle H\rangle}\)</span> and floored to avoid
+underflow in the downstream RT.</p>
+</section>
+<section id="outputs-and-dust-opacity">
+<h2>Outputs and dust opacity<a class="headerlink" href="#outputs-and-dust-opacity" title="Link to this heading">¶</a></h2>
+<p>For each layer the module stores the (depleted) nucleation rate, growth
+timescale, grain number density, mean grain radius, and the degree of
+condensation, written to the dust output file.  The grain optical properties are
+then obtained from <strong>Mie theory</strong> (LX-MIE) using the material’s complex
+refractive index (<a class="reference internal" href="opacities.html"><span class="doc">Opacities (transport coefficients)</span></a>); <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">calcTransportCoefficients()</span></code>
+returns the per-layer dust absorption and scattering coefficients that enter the
+total opacity.</p>
+</section>
+<section id="coupling-to-the-hydrodynamics">
+<h2>Coupling to the hydrodynamics<a class="headerlink" href="#coupling-to-the-hydrodynamics" title="Link to this heading">¶</a></h2>
+<p>The frozen kernels needed by the Henyey structure solver are exposed through the
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::DustSpecies</span></code> accessors <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">nucleationRate()</span></code>,
+<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">growthTimescale()</span></code> and <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">secondMoment()</span></code>, handed to the
+hydrodynamics via <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::Hydrodynamics::setDustState()</span></code> (a no-op for the
+default shooting path).</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="opacities.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Opacities (transport coefficients)</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="chemistry.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Gas-phase chemistry (FastChem)</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Daniel Kitzmann, Joachim Stock
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Dust formation (Gail &amp; Sedlmayr)</a><ul>
+<li><a class="reference internal" href="#the-moment-equations">The moment equations</a></li>
+<li><a class="reference internal" href="#nucleation-rate">Nucleation rate</a></li>
+<li><a class="reference internal" href="#carbon-depletion-in-a-single-causal-sweep">Carbon depletion in a single causal sweep</a></li>
+<li><a class="reference internal" href="#outputs-and-dust-opacity">Outputs and dust opacity</a></li>
+<li><a class="reference internal" href="#coupling-to-the-hydrodynamics">Coupling to the hydrodynamics</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=f26bd01d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>

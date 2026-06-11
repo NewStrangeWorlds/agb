@@ -1,0 +1,522 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Radiative-equilibrium temperature correction" href="temperature_correction.html"><link rel="prev" title="The coupled problem and the solution loop" href="governing_equations.html">
+        <link rel="prefetch" href="../_static/agb-icon-512.png" as="image">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>Radiative transfer - AGB Dust-Driven Wind Model</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">AGB Dust-Driven Wind Model</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/agb-icon-512.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">AGB Dust-Driven Wind Model</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation and building</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../running.html">Running a model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration (config.toml)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory and modelling</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Theory and modelling</a><input aria-label="Toggle navigation of Theory and modelling" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Radiative transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="governing_equations.html">The coupled problem and the solution loop</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Radiative transfer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Implementation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/modules.html">Source tree guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/io_formats.html">File formats</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/theory/radiative_transfer.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="radiative-transfer">
+<h1>Radiative transfer<a class="headerlink" href="#radiative-transfer" title="Link to this heading">¶</a></h1>
+<p><em>Module:</em> <code class="docutils literal notranslate"><span class="pre">src/radiative_transfer/</span></code> —
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::RadiativeTransfer</span></code>, <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::RadiationField</span></code>,
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::ImpactParam</span></code>.</p>
+<p>The radiative transfer is solved with the <strong>Rybicki–Hummer variable-Eddington-
+factor (VEF) moment method</strong> for a spherically symmetric, static medium, as
+described in the diploma thesis of D. Kitzmann.  The implementation matches that
+scheme term by term.</p>
+<section id="method-overview">
+<h2>Method overview<a class="headerlink" href="#method-overview" title="Link to this heading">¶</a></h2>
+<p>The VEF method splits the angle-dependent transfer problem into two coupled
+pieces that are iterated to consistency:</p>
+<ol class="arabic simple">
+<li><p>A <strong>formal solution along tangent rays</strong> (impact parameters) gives the
+angular distribution of the specific intensity at each radius, and from it the
+closure quantities — the <strong>Eddington factor</strong> <span class="math notranslate nohighlight">\(f_\nu=K_\nu/J_\nu\)</span> and
+the <strong>sphericality factor</strong> <span class="math notranslate nohighlight">\(q_\nu\)</span>.</p></li>
+<li><p>A <strong>moment system</strong> for <span class="math notranslate nohighlight">\(J_\nu(r)\)</span>, closed with the just-computed
+<span class="math notranslate nohighlight">\(f_\nu\)</span> and <span class="math notranslate nohighlight">\(q_\nu\)</span>, is a cheap tridiagonal problem that yields a
+new mean intensity and hence a new source function.</p></li>
+</ol>
+<p>Iterating (1) ↔ (2) converges because the Eddington factors are only weakly
+dependent on the source function, while the expensive angular detail is needed
+only to update them.</p>
+</section>
+<section id="geometry-impact-parameters-and-tangent-rays">
+<h2>Geometry: impact parameters and tangent rays<a class="headerlink" href="#geometry-impact-parameters-and-tangent-rays" title="Link to this heading">¶</a></h2>
+<p>For a spherical atmosphere the natural coordinates are <strong>impact parameters</strong>
+<span class="math notranslate nohighlight">\(p\)</span> (tangent rays).  The set of rays comprises:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">nb_core_impact_param</span></code> rays that strike the stellar core (<span class="math notranslate nohighlight">\(p&lt;R_\star\)</span>),
+carrying the inner boundary intensity, and</p></li>
+<li><p>one tangent ray per radial shell (<span class="math notranslate nohighlight">\(p=r_i\)</span>), so that each shell is sampled.</p></li>
+</ul>
+<p>Along each ray the geometric coordinate is <span class="math notranslate nohighlight">\(z=\sqrt{r^2-p^2}\)</span>; the set of
+<code class="docutils literal notranslate"><span class="pre">zPoint</span></code> crossings of a ray with the radial shells defines the spatial grid for
+the <strong>Feautrier</strong> variables</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[u_\nu = \tfrac12 (I_\nu^+ + I_\nu^-), \qquad
+v_\nu = \tfrac12 (I_\nu^+ - I_\nu^-),\]</div>
+</div>
+<p>the mean and difference of the outgoing/incoming intensities.  The ray geometry
+is built once and rebuilt (<code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::RadiativeTransfer::rebuildGeometry()</span></code>)
+only when the radial grid moves (movable grid).</p>
+</section>
+<section id="formal-solution-on-a-ray-feautrier">
+<h2>Formal solution on a ray (Feautrier)<a class="headerlink" href="#formal-solution-on-a-ray-feautrier" title="Link to this heading">¶</a></h2>
+<p>Along each impact parameter the second-order Feautrier equation for
+<span class="math notranslate nohighlight">\(u_\nu\)</span> is discretised on the ray’s optical-depth grid and solved as a
+tridiagonal system (<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::ImpactParam</span></code>).  Two discretisations are
+available:</p>
+<ul class="simple">
+<li><p><strong>Taylor</strong> finite differences (<code class="docutils literal notranslate"><span class="pre">assembleSystemTaylor</span></code>) — the default.</p></li>
+<li><p><strong>Cubic splines</strong> (<code class="docutils literal notranslate"><span class="pre">assembleSystemSpline</span></code>).</p></li>
+</ul>
+<p>The difference variable <span class="math notranslate nohighlight">\(v_\nu\)</span> is then recovered (<code class="docutils literal notranslate"><span class="pre">calcV</span></code>), and angular
+integration over all rays passing through a shell yields the moments
+<span class="math notranslate nohighlight">\(J_\nu, H_\nu, K_\nu\)</span> and thus the closure factors at that shell.</p>
+</section>
+<section id="the-moment-system-for-j-nu">
+<h2>The moment system for <span class="math notranslate nohighlight">\(J_\nu\)</span><a class="headerlink" href="#the-moment-system-for-j-nu" title="Link to this heading">¶</a></h2>
+<p>With <span class="math notranslate nohighlight">\(f_\nu\)</span> and <span class="math notranslate nohighlight">\(q_\nu\)</span> frozen from the formal solution, the
+zeroth/first moment equations combine into a single second-order ODE for
+<span class="math notranslate nohighlight">\(J_\nu\)</span>.  In the optical-depth-like coordinate <span class="math notranslate nohighlight">\(X\)</span> (built by
+<code class="docutils literal notranslate"><span class="pre">generateXGrid</span></code> from the extinction and the sphericality factor) this is</p>
+<div class="math-wrapper docutils container" id="equation-moment-eq">
+<div class="math notranslate nohighlight" id="equation-moment-eq">
+<span class="eqno">(1)<a class="headerlink" href="#equation-moment-eq" title="Link to this equation">¶</a></span>\[\frac{\partial}{\partial X}\!\left(\frac{\partial (f_\nu q_\nu r^2 J_\nu)}
+{\partial X}\right) = q_\nu r^2 (J_\nu - S_\nu) ,\]</div>
+</div>
+<p>with the source function</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[S_\nu = \frac{\kappa_\nu B_\nu(T) + \sigma_\nu J_\nu}{\chi_\nu}
+\quad\Longrightarrow\quad
+\chi_\nu(J_\nu - S_\nu) = \kappa_\nu (J_\nu - B_\nu) .\]</div>
+</div>
+<p>Here <span class="math notranslate nohighlight">\(\kappa_\nu B_\nu\)</span> is the <strong>thermal emission</strong>; for a two-temperature
+medium it is the sum over gas and dust,
+<span class="math notranslate nohighlight">\(\kappa_{\nu,\mathrm{gas}}B_\nu(T_\mathrm{gas})+
+\kappa_{\nu,\mathrm{dust}}B_\nu(T_\mathrm{dust})\)</span>.  This emission is
+iteration-invariant within one RT solve and is therefore precomputed once
+(<code class="docutils literal notranslate"><span class="pre">precomputeEmission</span></code> → <code class="docutils literal notranslate"><span class="pre">planck_emission[nu][i]</span></code>).</p>
+<p><a class="reference internal" href="#equation-moment-eq">Eq. 1</a> is assembled as a tridiagonal system
+(<code class="docutils literal notranslate"><span class="pre">assembleMomentSystemTaylor</span></code> / <code class="docutils literal notranslate"><span class="pre">…Spline</span></code>) and solved with the Thomas
+algorithm (<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::aux::TriDiagonalMatrix</span></code>).  Iterating with the
+scattering term <span class="math notranslate nohighlight">\(\sigma_\nu J_\nu\)</span> updated each pass converges the field;
+<code class="docutils literal notranslate"><span class="pre">solveMomentSystem</span></code> drives this for every frequency.</p>
+</section>
+<section id="taylor-vs-spline-discretisation">
+<span id="rt-taylor-vs-spline"></span><h2>Taylor vs. spline discretisation<a class="headerlink" href="#taylor-vs-spline-discretisation" title="Link to this heading">¶</a></h2>
+<p>The two discretisations differ in their stability:</p>
+<ul class="simple">
+<li><p><strong>Taylor</strong> finite differences keep the system matrix an <strong>M-matrix</strong>
+(positivity-preserving) unconditionally, so <span class="math notranslate nohighlight">\(J_\nu\ge0\)</span> always.</p></li>
+<li><p><strong>Cubic splines</strong> lose the M-matrix property once the optical depth per cell
+exceeds <span class="math notranslate nohighlight">\(\sqrt 6\approx2.45\)</span>, producing <em>negative</em> mean intensities —
+exactly as the thesis (§A.1.3) warns.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Use the <strong>Taylor</strong> discretisation (<code class="docutils literal notranslate"><span class="pre">use_spline_discretisation</span> <span class="pre">=</span> <span class="pre">false</span></code>) for
+production.  The spline option is retained for cross-checks only.  (Historic
+negative-intensity crashes were ultimately traced to a <em>density-collapse</em> bug
+upstream in the hydrodynamics, not to the RT scheme: a transparent atmosphere
+makes both the moment system and the Feautrier solve degenerate.)</p>
+</div>
+</section>
+<section id="two-flux-definitions-and-why-they-coexist">
+<h2>Two flux definitions and why they coexist<a class="headerlink" href="#two-flux-definitions-and-why-they-coexist" title="Link to this heading">¶</a></h2>
+<p>The frequency-<em>integrated</em> flux is needed in two roles that pull toward
+different discretisations, so the code keeps <strong>two</strong> integrated-flux fields:</p>
+<ul>
+<li><p><strong>Transport form (eq. 2.58)</strong>, <code class="docutils literal notranslate"><span class="pre">eddington_flux</span></code> / <code class="docutils literal notranslate"><span class="pre">eddington_flux_int</span></code> —
+the per-frequency flux from the gradient of <span class="math notranslate nohighlight">\(f_\nu q_\nu r^2 J_\nu\)</span>
+(<code class="docutils literal notranslate"><span class="pre">calcFlux</span></code>).  This is physical (non-negative) per frequency, so it is used
+for the emergent <strong>spectrum</strong> and as the denominator of the <strong>flux-mean
+extinction</strong> and other ratios.</p></li>
+<li><p><strong>Divergence form (eq. 2.59)</strong>, <code class="docutils literal notranslate"><span class="pre">eddington_flux_int_conservative</span></code> —
+obtained by integrating</p>
+<div class="math-wrapper docutils container" id="equation-flux-div">
+<div class="math notranslate nohighlight" id="equation-flux-div">
+<span class="eqno">(2)<a class="headerlink" href="#equation-flux-div" title="Link to this equation">¶</a></span>\[\frac{\partial (r^2 H_\mathrm{int})}{\partial r}
+= r^2 \!\int \kappa_{\nu,\mathrm{abs}}\,(B_\nu - J_\nu)\,\mathrm{d}\nu ,\]</div>
+</div>
+<p>outward from the diffusion inner boundary condition
+<span class="math notranslate nohighlight">\(r^2 H_\mathrm{int}(r_1)=r_1^2\,\mathrm{bfc}\cdot
+(\mathrm{d}B/\mathrm{d}T)/\chi\)</span>.  Its divergence equals the local balance that
+the moment-equation <span class="math notranslate nohighlight">\(J\)</span>-solve enforces, so <span class="math notranslate nohighlight">\(r^2 H_\mathrm{int}\)</span> is
+<strong>conserved at radiative equilibrium</strong>.  This is the quantity compared against
+the target luminosity in the flux-convergence test and used by the
+temperature corrector’s flux term.</p>
+</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Keeping these separate is essential.  <code class="docutils literal notranslate"><span class="pre">eddington_flux_int</span></code> is simultaneously
+a <em>ratio denominator</em> (which must stay consistent with its eq. 2.58
+numerator) and a <em>flux value</em> (which wants the conservative eq. 2.59 form).
+Conflating them corrupts the flux-mean extinction, which feeds the wind, and
+makes the coupled loop diverge.  The behaviour is controlled by
+<code class="docutils literal notranslate"><span class="pre">flux_from_divergence</span></code> (<a class="reference internal" href="../configuration.html"><span class="doc">Configuration (config.toml)</span></a>).</p>
+</div>
+</section>
+<section id="outputs-of-the-rt-module">
+<h2>Outputs of the RT module<a class="headerlink" href="#outputs-of-the-rt-module" title="Link to this heading">¶</a></h2>
+<p>For each radial shell, <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">agb::RadiationField</span></code> stores the spectral
+moments (<code class="docutils literal notranslate"><span class="pre">mean_intensity</span></code>, <code class="docutils literal notranslate"><span class="pre">eddington_flux</span></code>, <code class="docutils literal notranslate"><span class="pre">eddington_k</span></code>), their
+wavelength integrals, the Eddington and sphericality factors, and the
+angle-grid intensities.  It also provides the <strong>flux-weighted (flux-mean)
+extinction</strong> <span class="math notranslate nohighlight">\(\chi_F\)</span> (<code class="docutils literal notranslate"><span class="pre">fluxWeightedExtinction</span></code>), which is the single
+most important quantity handed to the hydrodynamics — it sets the radiative
+acceleration <a class="reference internal" href="governing_equations.html#equation-alpha-def">Eq. 1</a>.</p>
+</section>
+<section id="the-linearised-moment-operator">
+<h2>The linearised moment operator<a class="headerlink" href="#the-linearised-moment-operator" title="Link to this heading">¶</a></h2>
+<p>For the full-linearisation temperature corrector the RT module can also expose
+its operator in linearised form (<code class="docutils literal notranslate"><span class="pre">buildLinearisedMomentSystem</span></code>): per frequency
+it returns the frozen Taylor moment matrix <span class="math notranslate nohighlight">\(V_\nu\)</span>, the diagonal source
+derivative <span class="math notranslate nohighlight">\(\mathrm{d}S/\mathrm{d}T\)</span>, and the moment-equation residual
+<span class="math notranslate nohighlight">\(K_\nu=\mathrm{rhs}_\nu - V_\nu J_\nu\)</span>.  The temperature corrector consumes
+these; see <a class="reference internal" href="temperature_correction.html"><span class="doc">Radiative-equilibrium temperature correction</span></a>.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="temperature_correction.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Radiative-equilibrium temperature correction</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="governing_equations.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">The coupled problem and the solution loop</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Daniel Kitzmann, Joachim Stock
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Radiative transfer</a><ul>
+<li><a class="reference internal" href="#method-overview">Method overview</a></li>
+<li><a class="reference internal" href="#geometry-impact-parameters-and-tangent-rays">Geometry: impact parameters and tangent rays</a></li>
+<li><a class="reference internal" href="#formal-solution-on-a-ray-feautrier">Formal solution on a ray (Feautrier)</a></li>
+<li><a class="reference internal" href="#the-moment-system-for-j-nu">The moment system for <span class="math notranslate nohighlight">\(J_\nu\)</span></a></li>
+<li><a class="reference internal" href="#taylor-vs-spline-discretisation">Taylor vs. spline discretisation</a></li>
+<li><a class="reference internal" href="#two-flux-definitions-and-why-they-coexist">Two flux definitions and why they coexist</a></li>
+<li><a class="reference internal" href="#outputs-of-the-rt-module">Outputs of the RT module</a></li>
+<li><a class="reference internal" href="#the-linearised-moment-operator">The linearised moment operator</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=f26bd01d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>

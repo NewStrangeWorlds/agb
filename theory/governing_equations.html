@@ -1,0 +1,460 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Radiative transfer" href="radiative_transfer.html"><link rel="prev" title="Theory and modelling" href="index.html">
+        <link rel="prefetch" href="../_static/agb-icon-512.png" as="image">
+
+    <!-- Generated with Sphinx 9.1.0 and Furo 2025.12.19 -->
+        <title>The coupled problem and the solution loop - AGB Dust-Driven Wind Model</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=d111a655" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f2f2f2;
+  --color-code-foreground: #1e1e1e;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">AGB Dust-Driven Wind Model</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/agb-icon-512.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">AGB Dust-Driven Wind Model</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation and building</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../running.html">Running a model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration.html">Configuration (config.toml)</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Theory and modelling</span></p>
+<ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Theory and modelling</a><input aria-label="Toggle navigation of Theory and modelling" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">The coupled problem and the solution loop</a></li>
+<li class="toctree-l2"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">The coupled problem and the solution loop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="radiative_transfer.html">Radiative transfer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="temperature_correction.html">Radiative-equilibrium temperature correction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chemistry.html">Gas-phase chemistry (FastChem)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dust.html">Dust formation (Gail &amp; Sedlmayr)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="opacities.html">Opacities (transport coefficients)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="hydrodynamics.html">Wind hydrodynamics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="numerics.html">Numerical methods and robustness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Implementation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/modules.html">Source tree guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../implementation/io_formats.html">File formats</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../glossary.html">Glossary</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">References</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/theory/governing_equations.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="the-coupled-problem-and-the-solution-loop">
+<h1>The coupled problem and the solution loop<a class="headerlink" href="#the-coupled-problem-and-the-solution-loop" title="Link to this heading">¶</a></h1>
+<p>The model determines the stationary, spherically symmetric structure of a
+carbon-star wind.  Four physics blocks are coupled:</p>
+<ol class="arabic simple">
+<li><p><strong>Radiative transfer</strong> — given the temperature structure and the opacities,
+solve for the radiation field <span class="math notranslate nohighlight">\(J_\nu(r)\)</span>, the flux <span class="math notranslate nohighlight">\(H_\nu(r)\)</span>, and
+the variable Eddington factors.</p></li>
+<li><p><strong>Radiative equilibrium</strong> — given the radiation field and the opacities,
+correct the gas and dust temperatures so that each is in local radiative
+equilibrium (energy balance) and the integrated flux carries the stellar
+luminosity.</p></li>
+<li><p><strong>Chemistry and dust</strong> — given the temperature and density, compute the
+equilibrium gas composition (FastChem) and the carbon-dust nucleation,
+growth and condensation (Gail &amp; Sedlmayr moment method), which set the dust
+opacity.</p></li>
+<li><p><strong>Hydrodynamics</strong> — given the (gas + dust) opacity and the radiation field,
+solve the stationary wind equation for the velocity, density, the sonic
+point, and the mass-loss rate.</p></li>
+</ol>
+<p>The coupling closes a loop: temperature → chemistry/dust → opacity → radiation
+field → temperature, and opacity + radiation → wind → density → chemistry/dust.</p>
+<section id="the-two-physical-structure-equations">
+<h2>The two physical structure equations<a class="headerlink" href="#the-two-physical-structure-equations" title="Link to this heading">¶</a></h2>
+<p><strong>Stationary continuity</strong> fixes the density once the velocity and mass-loss rate
+are known:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\dot{M} = 4\pi r^2\,\rho(r)\,v(r)
+\quad\Longrightarrow\quad
+\rho(r) = \frac{\dot{M}}{4\pi r^2 v(r)} .\]</div>
+</div>
+<p><strong>Stationary momentum</strong> (the wind equation) balances inertia, pressure gravity
+and the radiative force.  Writing the radiative acceleration as a fraction
+<span class="math notranslate nohighlight">\(\alpha\)</span> of gravity,</p>
+<div class="math-wrapper docutils container" id="equation-alpha-def">
+<div class="math notranslate nohighlight" id="equation-alpha-def">
+<span class="eqno">(1)<a class="headerlink" href="#equation-alpha-def" title="Link to this equation">¶</a></span>\[\alpha(r) = \frac{\chi_F(r)\,L_\star}
+{4\pi c\,G M_\star\,\rho(r)} ,\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(\chi_F\)</span> is the flux-mean extinction coefficient, the momentum
+equation for an isothermal-sound-speed gas becomes a transonic problem with a
+critical (sonic) point.  The code removes the sonic-point singularity with the
+<strong>Melia</strong> <span class="math notranslate nohighlight">\(\Phi\)</span> transform; see <a class="reference internal" href="hydrodynamics.html"><span class="doc">Wind hydrodynamics</span></a>.</p>
+</section>
+<section id="energy-radiative-equilibrium">
+<h2>Energy: radiative equilibrium<a class="headerlink" href="#energy-radiative-equilibrium" title="Link to this heading">¶</a></h2>
+<p>Because the wind is optically thin to thick and radiation dominates the energy
+budget, the gas and dust temperatures are fixed by <strong>radiative equilibrium</strong>
+rather than by an energy equation with advection.  The condition is local energy
+balance for each absorbing component <span class="math notranslate nohighlight">\(s\in\{\text{gas},\text{dust}\}\)</span>:</p>
+<div class="math-wrapper docutils container" id="equation-re-balance">
+<div class="math notranslate nohighlight" id="equation-re-balance">
+<span class="eqno">(2)<a class="headerlink" href="#equation-re-balance" title="Link to this equation">¶</a></span>\[\int \kappa_{\nu,s}\,\bigl(J_\nu - B_\nu(T_s)\bigr)\,\mathrm{d}\nu = 0 ,\]</div>
+</div>
+<p>together with global flux constancy
+<span class="math notranslate nohighlight">\(r^2 H_\mathrm{int}(r) = L_\star/(16\pi^2)\)</span>.  The temperature corrector
+(<a class="reference internal" href="temperature_correction.html"><span class="doc">Radiative-equilibrium temperature correction</span></a>) drives <a class="reference internal" href="#equation-re-balance">Eq. 2</a> and the flux constraint
+to zero.</p>
+</section>
+<section id="the-solution-loop">
+<h2>The solution loop<a class="headerlink" href="#the-solution-loop" title="Link to this heading">¶</a></h2>
+<p>The driver is <code class="xref cpp cpp-func docutils literal notranslate"><span class="pre">agb::AGBStarModel::calcModel()</span></code>.  The structure is two
+nested fixed-point iterations:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>for it in 0 .. nb_temperature_iter:            # OUTER (global) iteration
+    chemistryHydroIteration():                 #   INNER iteration
+        repeat up to nb_hydrodynamics_iter:
+            chemistryDustIteration()           #     FastChem + Gail-Sedlmayr dust
+            radiativeTransfer()                #     opacities + RT solve
+            hydrodynamics.calcWindVelocity()   #     wind + Mdot
+            until max |Δα| &lt; hydrodynamics_convergence
+    temperatureIteration()                     #   one radiative-equilibrium step
+    if converged: break
+    (optionally) applyMovableGrid()            #   adaptive regrid
+</pre></div>
+</div>
+<p>The <strong>inner loop</strong> holds the temperature fixed and iterates chemistry, dust,
+radiative transfer and the wind until the radiative acceleration <span class="math notranslate nohighlight">\(\alpha\)</span>
+is self-consistent.  The <strong>outer loop</strong> then performs a single
+radiative-equilibrium temperature correction and tests global convergence.  This
+two-level Picard structure follows the coupled-model scheme of Winters et al.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A subtle but important design choice: the carbon consumed by dust formation
+is <strong>not</strong> removed in a separate outer chemistry↔dust fixed point.  Instead
+the Gail &amp; Sedlmayr moment sweep depletes the growth species <em>differentially</em>
+along the outward integration (throttling growth and nucleation by
+<span class="math notranslate nohighlight">\(1-f_c\)</span>, with <span class="math notranslate nohighlight">\(f_c\)</span> the running degree of condensation).  This
+single-pass, causal treatment is robust where an outer Picard on the degree
+of condensation would oscillate.  See <a class="reference internal" href="dust.html"><span class="doc">Dust formation (Gail &amp; Sedlmayr)</span></a>.</p>
+</div>
+</section>
+<section id="convergence-criteria">
+<h2>Convergence criteria<a class="headerlink" href="#convergence-criteria" title="Link to this heading">¶</a></h2>
+<p>The outer iteration is declared converged when <strong>all</strong> of the following are
+simultaneously below <code class="docutils literal notranslate"><span class="pre">temperature_convergence</span></code>:</p>
+<ul class="simple">
+<li><p>the flux deviation from the target <span class="math notranslate nohighlight">\(L_\star/(16\pi^2)\)</span>,</p></li>
+<li><p>the gas energy-balance residual (ratio form of <a class="reference internal" href="#equation-re-balance">Eq. 2</a>),</p></li>
+<li><p>the dust energy-balance residual,</p></li>
+<li><p>the maximum relative temperature change actually applied this step.</p></li>
+</ul>
+<p>Requiring the last term (a <em>settling</em> indicator) prevents declaring convergence
+mid-oscillation.  The inner loop additionally requires a genuinely <em>accepted</em>
+wind solve — a rejected wind solve freezes the structure, so an unchanged
+<span class="math notranslate nohighlight">\(\alpha\)</span> must <strong>not</strong> be mistaken for convergence.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="radiative_transfer.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Radiative transfer</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Theory and modelling</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; Daniel Kitzmann, Joachim Stock
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">The coupled problem and the solution loop</a><ul>
+<li><a class="reference internal" href="#the-two-physical-structure-equations">The two physical structure equations</a></li>
+<li><a class="reference internal" href="#energy-radiative-equilibrium">Energy: radiative equilibrium</a></li>
+<li><a class="reference internal" href="#the-solution-loop">The solution loop</a></li>
+<li><a class="reference internal" href="#convergence-criteria">Convergence criteria</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=f26bd01d"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    </body>
+</html>
