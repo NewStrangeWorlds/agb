@@ -12,10 +12,6 @@ gravity, drives a slow, massive outflow. The model solves the coupled
 radiation–chemistry–dust–hydrodynamics problem for the steady-state structure
 and the mass-loss rate.
 
-The reference application is the prototypical carbon star **IRC+10216**, for
-which the model reproduces the observed mass-loss rate of
-`Mdot ≈ 8e-5 M_sun/yr`.
-
 The code couples:
 
 * a **spherical, frequency-dependent radiative transfer** solver (Rybicki–Hummer
