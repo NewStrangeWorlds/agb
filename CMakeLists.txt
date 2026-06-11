@@ -73,6 +73,7 @@ set(SRC
   src/dust/gail_sedlmayr_thermo_functions.cpp
   src/hydrodynamics/hydrodynamics.cpp
   src/hydrodynamics/structure_solver.cpp
+  src/hydrodynamics/henyey_solver.cpp
   _deps/lx_mie-src/mie/mie.cpp)
   
 
