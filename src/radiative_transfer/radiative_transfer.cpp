@@ -12,7 +12,6 @@
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
-#include <chrono>
 
 #include "../additional/aux_functions.h"
 #include "../spectral_grid/spectral_grid.h"
@@ -197,8 +196,6 @@ void RadiativeTransfer::calcSphericalityFactor()
 
 void RadiativeTransfer::solveRadiativeTransfer()
 {
-  const auto rt_wall_t0 = std::chrono::steady_clock::now();
-
   for (size_t i=0; i<nb_grid_points; ++i)
     for (size_t j=0; j<nb_spectral_points; ++j)
     {
@@ -334,11 +331,6 @@ void RadiativeTransfer::solveRadiativeTransfer()
 
   if (std::getenv("FLUX_CONSIST"))
     fluxConsistencyDiagnostic();
-
-  const auto rt_wall_t1 = std::chrono::steady_clock::now();
-  std::cout << "RT solve wall time: "
-            << std::chrono::duration<double>(rt_wall_t1 - rt_wall_t0).count()
-            << " s\n";
 
   // std::cout << "Radiation field : \n";
 

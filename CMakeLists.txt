@@ -130,6 +130,20 @@ endif()
 
 
 
+#download toml++ (header-only) for parsing the TOML model configuration file
+FetchContent_Declare(
+  tomlplusplus
+  GIT_REPOSITORY https://github.com/marzer/tomlplusplus
+  GIT_TAG        v3.4.0
+)
+
+FetchContent_GetProperties(tomlplusplus)
+if (NOT tomlplusplus_POPULATED)
+  FetchContent_Populate(tomlplusplus)
+endif()
+
+
+
 #build CppAD (provides autodiff for the Henyey structure-solver Jacobian).
 #CppAD's CMake generates configure.hpp and forces CMAKE_INSTALL_PREFIX, so it is
 #built/installed in isolation via ExternalProject rather than add_subdirectory.
@@ -156,7 +170,7 @@ file(MAKE_DIRECTORY ${CPPAD_INSTALL_DIR}/include)
 # build application
 add_executable(agb_wind ${SRC})
 add_dependencies(agb_wind cppad_external)
-target_include_directories(agb_wind PUBLIC ${CPPAD_INSTALL_DIR}/include ${eigen_SOURCE_DIR})
+target_include_directories(agb_wind PUBLIC ${CPPAD_INSTALL_DIR}/include ${eigen_SOURCE_DIR} ${tomlplusplus_SOURCE_DIR}/include)
 
 #cppad_lib is a shared library in a non-standard location; add it to the rpath
 #so the runtime loader finds it (the executable is placed in the source dir)

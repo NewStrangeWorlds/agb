@@ -9,10 +9,8 @@ namespace agb {
 
 struct ModelConfig {
   ModelConfig(const std::string model_folder);
-  bool loadConfigFile(const std::string folder);
-  bool loadOutputConfigFile(const std::string folder);
-  void readOpacityConfig(std::fstream& file);
-  
+  bool loadConfigFile(const std::string folder);   //reads <folder>/config.toml
+
   std::string model_folder = "";
 
   double stellar_radius = 0;
@@ -49,8 +47,8 @@ struct ModelConfig {
   //r^2 H_int is conserved at radiative equilibrium (lets Unsoeld-Lucy's flux term and the
   //flux-convergence check work). The per-frequency eddington_flux stays on the eq. 2.58
   //transport form (calcFlux) so the monochromatic flux is physical (>=0) for the spectrum
-  //and the flux-mean extinction. Set false for the pure legacy eq. 2.58 integral. Not read
-  //from model.config.
+  //and the flux-mean extinction. Set false for the pure legacy eq. 2.58 integral.
+  //config.toml: [radiative_transfer] flux_from_divergence.
   bool flux_from_divergence = true;
   
   unsigned int nb_temperature_iter = 200;
@@ -65,7 +63,7 @@ struct ModelConfig {
   //EXACT moment-system response M_n^{-1}, not the tau-weighted Unsoeld-Lucy heuristic.
   //The per-frequency mean intensities are eliminated by a Rybicki-type reduction to a
   //dense 2D x 2D temperature system (D = nb_grid_points). Requires the Taylor moment
-  //discretisation (use_spline_discretisation = false). Not read from model.config.
+  //discretisation (use_spline_discretisation = false). Now a config.toml key.
   //Default OFF -> exact current Unsoeld-Lucy behaviour.
   bool   use_linearisation = true;
   double linearisation_relaxation = 0.5;   //global under-relaxation of the Newton step
@@ -103,7 +101,7 @@ struct ModelConfig {
   double linearisation_zeta_tau_scale = 1.0;
 
   //Hard-enforce a strictly outward-decreasing temperature profile after each
-  //correction (clip T[i] -> 0.99 T[i-1]). Not read from model.config. Default OFF:
+  //correction (clip T[i] -> 0.99 T[i-1]). Now a config.toml key. Default OFF:
   //this constraint fights the Unsoeld-Lucy correction wherever radiative
   //equilibrium wants a flatter profile or a (e.g. dust-front) inversion, clipping
   //the just-applied heating back down every step and driving a +/-cap limit cycle
@@ -111,7 +109,7 @@ struct ModelConfig {
   bool force_monotonic_temperature = false;
 
   //Robustness controls for the radiative-equilibrium temperature iteration.
-  //These are not read from model.config; adjust here if needed. The iteration
+  //These are now config.toml keys; adjust here if needed. The iteration
   //uses an exact T^4 (Planck) update with an adaptive per-layer under-relaxation
   //omega (halved on sign flips to kill oscillations, grown back when the
   //correction is stable), optionally accelerated by Anderson mixing. The per-step
@@ -136,7 +134,7 @@ struct ModelConfig {
   double hydrodynamics_convergence = 1e-2;
 
   //Movable (adaptive) radial grid via equidistribution of a monitor function.
-  //Not read from model.config; adjust here. The grid moves as a step decoupled from
+  //Now a config.toml key; adjust here. The grid moves as a step decoupled from
   //the solvers: every regrid_frequency outer iterations the nodes are redistributed
   //so that  w(r) = 1 + sum a_k |d ln q_k/d ln r|  (over flux-mean opacity, gas
   //temperature, nucleation rate) is equal-integral per cell, then under-relaxed,
@@ -155,7 +153,7 @@ struct ModelConfig {
   //Structure solver for the stationary wind. Default: the Henyey-type global
   //Newton-Raphson eigenvalue solve (Setup A: dust decoupled / alpha frozen in the
   //Newton, alpha damped in the outer loop). Set false to fall back to the legacy
-  //Melia-Phi shooting method (kept for cross-checks). Not read from model.config;
+  //Melia-Phi shooting method (kept for cross-checks). Now a config.toml key;
   //flip here if needed.
   bool use_henyey_solver = false;
 
