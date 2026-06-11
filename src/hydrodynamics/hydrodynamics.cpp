@@ -310,7 +310,7 @@ std::vector<double> Hydrodynamics::windVelocity(
     if (i > 0 && wind_velocity[i] < wind_velocity[i-1])
       wind_velocity[i] = wind_velocity[i-1];
   }
-   
+  
   
   for (size_t i=critical_point+1; i<nb_grid_points; ++i)
     wind_velocity[i] = phi[i] + std::sqrt(phi[i]*phi[i] - isothermal_sound_speed[i] * isothermal_sound_speed[i]);
