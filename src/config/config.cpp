@@ -162,6 +162,16 @@ bool ModelConfig::loadConfigFile(const std::string folder_path)
   std::cout << "- hydrodynamics: " << nb_hydrodynamics_iter << " iter, conv "
             << hydrodynamics_convergence << ", henyey=" << use_henyey_solver << "\n";
 
+  //--- [grid] (only used when starting_model = "grey") ---
+  grid_nb_points    = static_cast<size_t>(
+    getInt(t["grid"]["n_points"], static_cast<int64_t>(grid_nb_points)));
+  grid_inner_radius = getDouble(t["grid"]["inner_radius"], grid_inner_radius);
+  grid_outer_radius = getDouble(t["grid"]["outer_radius"], grid_outer_radius);
+  grey_gas_opacity  = getDouble(t["grid"]["gas_opacity"],  grey_gas_opacity);
+  if (starting_model_path == "grey")
+    std::cout << "- grey start grid: " << grid_nb_points << " points, "
+              << grid_inner_radius << "-" << grid_outer_radius << " R*\n";
+
   //--- [dust] ---
   refractive_index_file = getStr(t["dust"]["refractive_index_file"], "");
   std::cout << "- dust refractive indices: " << refractive_index_file << "\n";
