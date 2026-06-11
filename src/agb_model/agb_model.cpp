@@ -87,27 +87,7 @@ void AGBStarModel::calcModel()
   prev_delta_b_gas.clear();  prev_delta_b_dust.clear();
   anderson_x_gas.clear();    anderson_f_gas.clear();
   anderson_x_dust.clear();   anderson_f_dust.clear();
-
-  std::vector<double> degree_of_condensation(atmosphere.nb_grid_points, 0);
-
-  chemistry.calcChemicalComposition(
-    std::vector<double>{}, 
-    atmosphere.temperature_gas, 
-    atmosphere.pressure_bar,
-    degree_of_condensation,
-    atmosphere.number_densities, 
-    atmosphere.mean_molecuar_weight,
-    atmosphere.total_element_density,
-    atmosphere.total_h_density);
-
-  atmosphere.equationOfState();
-
-  dust_species->calcDistribution(
-      chemistry.element_abundances[chemistry.fastchem_element_indices[_C]]
-    - chemistry.element_abundances[chemistry.fastchem_element_indices[_O]]);
-
-  chemistryDustIteration();
-  chemistryHydroIteration();
+  
 
   //two-phase corrector: unless told to linearise immediately, begin with Unsoeld-Lucy and
   //let temperatureIteration() latch on the linearisation once the profile is close enough
@@ -115,36 +95,15 @@ void AGBStarModel::calcModel()
 
   for (unsigned int it=0; it<config.nb_temperature_iter; ++it)
   {
-    //chemistryDustIteration();
+    std::cout << "Global iteration " << it << "\n";
+  
     chemistryHydroIteration();
 
     bool temperature_converged = temperatureIteration();
+
     std::cout << "Temperature iteration converged: " << temperature_converged << "\n\n";
 
     if (temperature_converged == true) break;
-
-    std::vector<double> temperature_change_gas(atmosphere.nb_grid_points, 0);
-    std::vector<double> temperature_change_dust(atmosphere.nb_grid_points, 0);
-
-    std::pair<double, size_t> temperature_convergence_gas = checkTemperatureConvergence(
-      atmosphere.temperature_gas, 
-      temperature_gas_old, 
-      temperature_change_gas);
-
-    std::pair<double, size_t> temperature_convergence_dust = checkTemperatureConvergence(
-      atmosphere.temperature_dust, 
-      temperature_dust_old, 
-      temperature_change_dust);
-    
-    std::cout << "Global iteration " << it << "\n";
-    std::cout << "Max T change "
-              << temperature_convergence_gas.first << "  " << temperature_convergence_gas.second << "\t"
-              << temperature_convergence_dust.first << "  " << temperature_convergence_dust.second << "\n\n";
-
-    //track the per-iteration change (previously these were never updated, so the
-    //reported change was cumulative drift from the initial guess)
-    temperature_gas_old = atmosphere.temperature_gas;
-    temperature_dust_old = atmosphere.temperature_dust;
 
     //movable grid: redistribute nodes to follow the steep (dust-front) features,
     //then refresh the change references so the next iteration is measured on the
@@ -158,10 +117,6 @@ void AGBStarModel::calcModel()
 
     //if (config.output_atmosphere_path != "")
       //atmosphere.writeStructure(config.output_atmosphere_path);
-
-    // if (std::abs(temperature_convergence_gas.first) < 1e-3
-    //     && std::abs(temperature_convergence_dust.first) < 1e-3)
-    //   break;
   }
 
 
@@ -263,13 +218,6 @@ bool AGBStarModel::chemistryHydroIteration()
     if (converged)
       break;
   }
-  
-  //exit(0);
-
-  // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
-  //   std::cout << i << "\t" << degree_of_condensation[i] << "\n";
-  // std::cout << chemistry.element_abundances[chemistry.fastchem_element_indices[_C]] << "\t" << chemistry.element_abundances[chemistry.fastchem_element_indices[_O]] << "\n";
-  // exit(0);
 
   return true;
 }
@@ -465,6 +413,7 @@ bool AGBStarModel::temperatureIteration()
     }
     else
     {
+      std::cout << "Performing Unsöld-Lucy correction.\n\n";
       //relaxed Unsoeld-Lucy correction; f_k = G(x_k) - x_k = delta_temperature.
       //calculate() does the exact T^4 update, per-layer adaptive damping and
       //correction smoothing, and carries the relaxation/prev-correction state.
@@ -603,17 +552,17 @@ bool AGBStarModel::temperatureIteration()
       }
     }
 
-    for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
-      std::cout << i << "\t" << atmosphere.temperature_gas[i] << "\t"
-                     << atmosphere.temperature_dust[i] << "\t"
-                     << delta_temperature_gas[i] << "\t"
-                     << delta_temperature_dust[i] << "\t"
-                     << radiative_transfer.radiation_field[i].eddington_flux_int_conservative*atmosphere.radius[i]*atmosphere.radius[i] << "\t"
-                     << energy_balance_gas[i] << "\t"
-                     << energy_balance_dust[i] << "\t"
-                     << "\n";
+    // for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
+    //   std::cout << i << "\t" << atmosphere.temperature_gas[i] << "\t"
+    //                  << atmosphere.temperature_dust[i] << "\t"
+    //                  << delta_temperature_gas[i] << "\t"
+    //                  << delta_temperature_dust[i] << "\t"
+    //                  << radiative_transfer.radiation_field[i].eddington_flux_int_conservative*atmosphere.radius[i]*atmosphere.radius[i] << "\t"
+    //                  << energy_balance_gas[i] << "\t"
+    //                  << energy_balance_dust[i] << "\t"
+    //                  << "\n";
     
-    std::cout << "\nTemperature iteration: " << it << "\n";
+    //std::cout << "\nTemperature iteration: " << it << "\n";
     std::cout << "Max relative T change: " << max_rel_change << "\n";
     std::cout << "Flux convergence (vs L target): "
               << flux_convergence.first << "\t" << flux_convergence.second << "\t"

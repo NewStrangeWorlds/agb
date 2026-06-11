@@ -190,7 +190,6 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
   const std::vector<double>& kappa_b,
   const std::vector<double>& planck_function_int)
 {
-  std::cout << "Performing Unsöld-Lucy correction.\n\n";
   const size_t nb_grid_points = radius.size();
 
   std::vector<double> tau_h(nb_grid_points, 0);

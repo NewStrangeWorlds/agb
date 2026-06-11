@@ -225,6 +225,8 @@ void GailSedlmayrDust::calcDistribution(const double condensable_carbon_abundanc
   //grid point, for output and as the frozen kernels for the hydrodynamics Newton solver
   nucleation_rate.assign(M, 0.);
   growth_rate.assign(M, 0.);
+  degree_of_condensation.assign(M, 0);
+
   for (size_t i=0; i<M; ++i)
   {
     const double ccond_dim = condensable_carbon_abundance * atmosphere->total_element_density[i];
@@ -234,6 +236,7 @@ void GailSedlmayrDust::calcDistribution(const double condensable_carbon_abundanc
 
     nucleation_rate[i] = nucleationRate(temp[i], nc[i]*depl, nc2[i]*depl, nc2h[i]*depl, nc2h2[i]*depl);
     growth_rate[i]     = growthRate(temp[i], nc[i]*depl, nc2[i]*depl, nc2h[i]*depl, nc2h2[i]*depl);
+    degree_of_condensation[i] = 1 - depl;
   }
 
   number_density.assign(M, 0.);
@@ -304,7 +307,7 @@ void GailSedlmayrDust::saveOutput(const std::string file_path)
   }
 
   std::cout << "Saving dust structure to " << file_path << "\n\n";
-
+  
   file << std::setw(16) << std::left << "#r/R*" << "\t"
        << std::setw(16) << std::left << "n<H>(cm-3)" << "\t"
        << std::setw(16) << std::left << "Tgas(K)" << "\t"
