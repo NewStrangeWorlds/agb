@@ -190,6 +190,7 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
   const std::vector<double>& kappa_b,
   const std::vector<double>& planck_function_int)
 {
+  std::cout << "Performing Unsöld-Lucy correction.\n\n";
   const size_t nb_grid_points = radius.size();
 
   std::vector<double> tau_h(nb_grid_points, 0);
@@ -200,6 +201,11 @@ std::vector<double> TemperatureCorrection::unsoeldLucyCorrection(
 
   std::vector<double> delta_h(nb_grid_points, 0.);
 
+  //flux deviation from the target. Use the SAME (eq. 2.58) integral as the rest of the
+  //Unsoeld-Lucy factors (qx_h, the h-factor): mixing the conservative (eq. 2.59) integral
+  //here with the 2.58 weighting made the correction internally inconsistent and oscillate
+  //in the coupled loop. UL is only the robust phase-1 starter (its ~2.3% flux floor is
+  //fine); the linearisation phase reaches true flux conservation.
   for (size_t i=0; i<nb_grid_points; ++i)
     delta_h[i] = (radiation_field[i].eddington_flux_int * radius[i]*radius[i] - config->stellar_luminosity / (16. * constants::pi * constants::pi ));
 

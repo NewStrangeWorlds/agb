@@ -62,6 +62,13 @@ void Hydrodynamics::saveOutput(const std::string file_path)
 
 
 
+void Hydrodynamics::resetWarmStart()
+{
+  henyey_x_prev.clear();
+  henyey_chi_prev.clear();
+}
+
+
 void Hydrodynamics::calcWindVelocity()
 {
   isothermal_sound_speed.assign(nb_grid_points, 0);

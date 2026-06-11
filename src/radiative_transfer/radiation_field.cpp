@@ -138,6 +138,10 @@ void RadiationField::wavelengthIntegration()
   flux_int = wavelengthIntegration(flux);
   eddington_k_int = wavelengthIntegration(eddington_k);
   mean_intensity_int = wavelengthIntegration(mean_intensity);
+
+  //default the conservative integral to the transport integral; conservativeFluxIntegral()
+  //overwrites it with the eq. 2.59 value when that form is enabled
+  eddington_flux_int_conservative = eddington_flux_int;
 }
 
 

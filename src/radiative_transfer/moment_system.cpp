@@ -185,6 +185,11 @@ void RadiativeTransfer::calcFlux(
   const std::vector<double>& radius2,
   const std::vector<double>& source_function)
 {
+  //Monochromatic flux H_nu from the first-moment relation (thesis eq. 2.58),
+  //d(f q r^2 J)/dX. This transport form keeps each H_nu physical (>= 0); the
+  //frequency-integrated flux is made conservative separately in conservativeFluxIntegral()
+  //(eq. 2.59) - the divergence form would conserve the integral but produce unphysical
+  //negative monochromatic fluxes (e.g. where the cool outer dust absorbs starlight).
   const std::vector<double>& x_grid = generateXGrid(
     extinction_coeff[nu],
     radius,
@@ -231,6 +236,51 @@ void RadiativeTransfer::calcFlux(
     radiation_field[i].flux[nu] = 4. * constants::pi * radiation_field[i].eddington_flux[nu];
   }
 
+}
+
+
+//Conservative frequency-integrated flux (thesis eq. 2.59), used to OVERWRITE
+//eddington_flux_int after the per-frequency calcFlux. The flux divergence equals the
+//frequency-integrated local balance, so r^2 H_int is conserved at radiative equilibrium:
+//  r^2 H_int(r) = L/(16 pi^2) + integral_{r1}^{r} r'^2 [int kappa_abs (B - J) dnu] dr'.
+//Same sign convention as the linearisation's S_bal (which drives this to the target).
+void RadiativeTransfer::conservativeFluxIntegral()
+{
+  const double target = config->stellar_luminosity / (16. * constants::pi * constants::pi);
+
+  //per-node radial source  S_i = r^2 * wavelengthIntegration( kappa_g(J-B_g) + kappa_d(J-B_d) )
+  std::vector<double> source(nb_grid_points, 0.);
+
+  #pragma omp parallel for
+  for (size_t i=0; i<nb_grid_points; ++i)
+  {
+    std::vector<double> y(nb_spectral_points, 0.);
+    for (size_t nu=0; nu<nb_spectral_points; ++nu)
+    {
+      const double J  = radiation_field[i].mean_intensity[nu];
+      const double wl = spectral_grid->wavelength_list[nu];
+      const double Bg = aux::planckFunctionWavelength(atmosphere->temperature_gas[i],  wl);
+      const double Bd = aux::planckFunctionWavelength(atmosphere->temperature_dust[i], wl);
+      y[nu] = atmosphere->absorption_coeff_gas[i][nu]  * (J - Bg)
+            + atmosphere->absorption_coeff_dust[i][nu] * (J - Bd);
+    }
+    const double r2 = atmosphere->radius[i]*atmosphere->radius[i];
+    source[i] = r2 * radiation_field[i].wavelengthIntegration(y);
+  }
+
+  //cumulative trapezoid outward from the inner boundary r^2 H_int(r1) = L/(16 pi^2).
+  //Stored in the separate eddington_flux_int_conservative so the (eq. 2.58) eddington_flux_int
+  //- and the flux-mean ratios that divide by it - stay self-consistent.
+  double r2h = target;
+  radiation_field[0].eddington_flux_int_conservative =
+    r2h / (atmosphere->radius[0]*atmosphere->radius[0]);
+
+  for (size_t i=1; i<nb_grid_points; ++i)
+  {
+    r2h += 0.5*(source[i] + source[i-1])*(atmosphere->radius[i] - atmosphere->radius[i-1]);
+    radiation_field[i].eddington_flux_int_conservative =
+      r2h / (atmosphere->radius[i]*atmosphere->radius[i]);
+  }
 }
 
 

@@ -9,6 +9,7 @@
 
 #include "../additional/aux_functions.h"
 #include "../additional/physical_const.h"
+#include "../additional/movable_grid.h"
 
 
 namespace agb{
@@ -108,6 +109,10 @@ void AGBStarModel::calcModel()
   chemistryDustIteration();
   chemistryHydroIteration();
 
+  //two-phase corrector: unless told to linearise immediately, begin with Unsoeld-Lucy and
+  //let temperatureIteration() latch on the linearisation once the profile is close enough
+  linearisation_active = config.use_linearisation && !config.linearisation_start_unsoeld_lucy;
+
   for (unsigned int it=0; it<config.nb_temperature_iter; ++it)
   {
     //chemistryDustIteration();
@@ -140,6 +145,16 @@ void AGBStarModel::calcModel()
     //reported change was cumulative drift from the initial guess)
     temperature_gas_old = atmosphere.temperature_gas;
     temperature_dust_old = atmosphere.temperature_dust;
+
+    //movable grid: redistribute nodes to follow the steep (dust-front) features,
+    //then refresh the change references so the next iteration is measured on the
+    //new grid
+    if (config.use_movable_grid && (it % config.regrid_frequency == 0))
+    {
+      applyMovableGrid();
+      temperature_gas_old = atmosphere.temperature_gas;
+      temperature_dust_old = atmosphere.temperature_dust;
+    }
 
     //if (config.output_atmosphere_path != "")
       //atmosphere.writeStructure(config.output_atmosphere_path);
@@ -300,6 +315,61 @@ void AGBStarModel::radiativeTransfer()
 
 
 
+void AGBStarModel::applyMovableGrid()
+{
+  const size_t np = atmosphere.nb_grid_points;
+
+  //monitor quantities on the current grid: flux-mean extinction, gas temperature,
+  //and dust nucleation rate
+  std::vector<double> chi_h(np, 0.);
+  for (size_t i=0; i<np; ++i)
+    chi_h[i] = radiative_transfer.radiation_field[i].fluxWeightedExtinction(
+                 atmosphere.extinction_coeff[i]);
+
+  std::vector<double> jstar = dust_species->nucleationRate();
+  if (jstar.size() != np) jstar.assign(np, 1.0);
+
+  const std::vector<std::vector<double>> quantities =
+    { chi_h, atmosphere.temperature_gas, jstar, atmosphere.velocity };
+  const std::vector<double> weights =
+    { config.monitor_weight_opacity,
+      config.monitor_weight_temperature,
+      config.monitor_weight_nucleation,
+      config.monitor_weight_velocity };
+
+  const std::vector<double> target = aux::equidistributedGrid(
+    atmosphere.radius, quantities, weights,
+    config.monitor_smoothing_passes, config.monitor_max, config.monitor_rel_floor);
+
+  //under-relax the node motion; pin the boundaries and keep the grid strictly monotone
+  std::vector<double> new_radius(np);
+  for (size_t i=0; i<np; ++i)
+    new_radius[i] = atmosphere.radius[i]
+                  + config.grid_relaxation * (target[i] - atmosphere.radius[i]);
+  new_radius[0]    = atmosphere.radius[0];
+  new_radius[np-1] = atmosphere.radius[np-1];
+  for (size_t i=1; i<np; ++i)
+    if (new_radius[i] <= new_radius[i-1])
+      new_radius[i] = new_radius[i-1] * (1.0 + 1e-6);
+
+  //remap the structure and rebuild the grid-dependent geometry / warm starts
+  atmosphere.remapToGrid(new_radius);
+  radiative_transfer.rebuildGeometry();
+  hydrodynamics.resetWarmStart();
+
+  //reset per-node temperature-iteration state (re-initialises lazily on the new grid)
+  relaxation_gas.clear();    relaxation_dust.clear();
+  prev_delta_b_gas.clear();  prev_delta_b_dust.clear();
+  anderson_x_gas.clear();    anderson_f_gas.clear();
+  anderson_x_dust.clear();   anderson_f_dust.clear();
+  anderson_was_active = false;
+  prev_max_rel_change = 1e30;
+
+  std::cout << "Movable grid: regridded; inner/outer r/R* = "
+            << atmosphere.radius_grid.front() << " / " << atmosphere.radius_grid.back() << "\n\n";
+}
+
+
 bool AGBStarModel::temperatureIteration()
 {
   bool converged = false;
@@ -347,24 +417,71 @@ bool AGBStarModel::temperatureIteration()
     std::vector<double> temperature_gas_prev  = atmosphere.temperature_gas;
     std::vector<double> temperature_dust_prev = atmosphere.temperature_dust;
 
-    //relaxed Unsoeld-Lucy correction; f_k = G(x_k) - x_k = delta_temperature.
-    //calculate() does the exact T^4 update, per-layer adaptive damping and
-    //correction smoothing, and carries the relaxation/prev-correction state.
-    std::vector<double> delta_temperature_gas = temperature_correction.calculate(
-      atmosphere.temperature_gas,
-      atmosphere.radius,
-      atmosphere.extinction_coeff,
-      atmosphere.absorption_coeff_gas,
-      relaxation_gas,
-      prev_delta_b_gas);
+    std::vector<double> delta_temperature_gas;
+    std::vector<double> delta_temperature_dust;
 
-    std::vector<double> delta_temperature_dust = temperature_correction.calculate(
-      atmosphere.temperature_dust,
-      atmosphere.radius,
-      atmosphere.extinction_coeff,
-      atmosphere.absorption_coeff_dust,
-      relaxation_dust,
-      prev_delta_b_dust);
+    if (linearisation_active)
+    {
+      //full-linearisation Newton step: the exact dJ/dT response of the converged RT
+      //operator drives both local radiative-equilibrium residuals to zero, removing
+      //the Unsoeld-Lucy accuracy floor. Anderson is bypassed (Newton already mixes).
+      radiative_transfer.linearisedTemperatureCorrection(
+        delta_temperature_gas, delta_temperature_dust);
+
+      //Per-layer adaptive under-relaxation of the Newton step (same mechanism as the
+      //Unsoeld-Lucy path): in the COUPLED loop the structure (dust formation, hydro)
+      //updates between steps, and a full Newton step can over-correct, driving a
+      //period-2 +/-cap limit cycle (seen most strongly just beyond the dust front
+      //where nucleation is extremely T-sensitive). Halve omega on a sign flip, grow it
+      //back when the step keeps its sign; apply omega AFTER capping the raw step so the
+      //damping is visible even while the cap binds (a step pinned at +/-cap with a
+      //flipping sign is exactly the oscillation we must damp).
+      const size_t ng = atmosphere.nb_grid_points;
+      if (relaxation_gas.size()    != ng) relaxation_gas.assign(ng, config.temperature_relaxation_init);
+      if (relaxation_dust.size()   != ng) relaxation_dust.assign(ng, config.temperature_relaxation_init);
+      if (prev_delta_b_gas.size()  != ng) prev_delta_b_gas.assign(ng, 0.);
+      if (prev_delta_b_dust.size() != ng) prev_delta_b_dust.assign(ng, 0.);
+
+      auto damp = [&](std::vector<double>& delta, std::vector<double>& relax,
+                      std::vector<double>& prev_delta, const std::vector<double>& temperature)
+      {
+        for (size_t i=0; i<ng; ++i)
+        {
+          if (delta[i] * prev_delta[i] < 0.) relax[i] *= config.temperature_relaxation_down;
+          else                               relax[i] *= config.temperature_relaxation_up;
+          relax[i] = std::min(std::max(relax[i], config.temperature_relaxation_min),
+                              config.temperature_relaxation_max);
+          prev_delta[i] = delta[i];
+
+          const double cap = config.temperature_max_change * temperature[i];
+          if (std::abs(delta[i]) > cap) delta[i] = std::copysign(cap, delta[i]);
+          delta[i] *= relax[i];   //omega applied AFTER the cap
+        }
+      };
+      damp(delta_temperature_gas,  relaxation_gas,  prev_delta_b_gas,  temperature_gas_prev);
+      damp(delta_temperature_dust, relaxation_dust, prev_delta_b_dust, temperature_dust_prev);
+    }
+    else
+    {
+      //relaxed Unsoeld-Lucy correction; f_k = G(x_k) - x_k = delta_temperature.
+      //calculate() does the exact T^4 update, per-layer adaptive damping and
+      //correction smoothing, and carries the relaxation/prev-correction state.
+      delta_temperature_gas = temperature_correction.calculate(
+        atmosphere.temperature_gas,
+        atmosphere.radius,
+        atmosphere.extinction_coeff,
+        atmosphere.absorption_coeff_gas,
+        relaxation_gas,
+        prev_delta_b_gas);
+
+      delta_temperature_dust = temperature_correction.calculate(
+        atmosphere.temperature_dust,
+        atmosphere.radius,
+        atmosphere.extinction_coeff,
+        atmosphere.absorption_coeff_dust,
+        relaxation_dust,
+        prev_delta_b_dust);
+    }
 
     //Anderson acceleration only once we are in the settling regime (per-step change
     //already well below the cap), so the early large-change transient that the
@@ -372,6 +489,7 @@ bool AGBStarModel::temperatureIteration()
     //history fresh on activation so it is not seeded by the transient.
     const bool accelerate =
       config.use_anderson_acceleration
+      && !linearisation_active
       && temp_iter_count >= config.anderson_start_iter
       && prev_max_rel_change < config.anderson_activation_fraction * config.temperature_max_change;
 
@@ -382,10 +500,14 @@ bool AGBStarModel::temperatureIteration()
     }
     anderson_was_active = accelerate;
 
-    std::vector<double> temperature_gas_acc = andersonStep(
-      anderson_x_gas, anderson_f_gas, temperature_gas_prev, delta_temperature_gas);
-    std::vector<double> temperature_dust_acc = andersonStep(
-      anderson_x_dust, anderson_f_dust, temperature_dust_prev, delta_temperature_dust);
+    std::vector<double> temperature_gas_acc, temperature_dust_acc;
+    if (accelerate)
+    {
+      temperature_gas_acc = andersonStep(
+        anderson_x_gas, anderson_f_gas, temperature_gas_prev, delta_temperature_gas);
+      temperature_dust_acc = andersonStep(
+        anderson_x_dust, anderson_f_dust, temperature_dust_prev, delta_temperature_dust);
+    }
 
     for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
     {
@@ -454,6 +576,31 @@ bool AGBStarModel::temperatureIteration()
       atmosphere.absorption_coeff_dust,
       energy_balance_dust);
 
+    //Two-phase corrector switch (Unsoeld-Lucy -> linearisation): latch on the Newton
+    //linearisation only once the profile has settled (small per-step change) AND is near
+    //radiative equilibrium (small energy-balance residual) for a few consecutive steps.
+    //Far from convergence the frozen-opacity Newton overshoots (esp. via the very
+    //temperature-sensitive dust nucleation), so UL is used to smooth the coarse errors first.
+    if (config.use_linearisation && config.linearisation_start_unsoeld_lucy && !linearisation_active)
+    {
+      const double re_residual = std::max(std::abs(max_energy_balance_gas.first),
+                                          std::abs(max_energy_balance_dust.first));
+      const bool settling = max_rel_change
+                          < config.linearisation_switch_dt_fraction * config.temperature_max_change;
+      const bool near_re  = re_residual < config.linearisation_switch_re_residual;
+
+      if (settling && near_re) ++linearisation_ready_count;
+      else                     linearisation_ready_count = 0;
+
+      if (linearisation_ready_count >= config.linearisation_switch_count)
+      {
+        linearisation_active = true;
+        std::cout << "[corrector] Unsoeld-Lucy -> linearisation at temperature iteration "
+                  << temp_iter_count << " (max|dT|/T=" << max_rel_change
+                  << ", RE residual=" << re_residual << ")\n";
+      }
+    }
+
     // auto max_energy_balance_gas = checkEnergyBalance(
     //   atmosphere.temperature_gas, 
     //   atmosphere.absorption_coeff,
@@ -477,7 +624,7 @@ bool AGBStarModel::temperatureIteration()
 
       for (size_t i=0; i<np; ++i)
       {
-        r2h[i] = radiative_transfer.radiation_field[i].eddington_flux_int
+        r2h[i] = radiative_transfer.radiation_field[i].eddington_flux_int_conservative
                * atmosphere.radius[i]*atmosphere.radius[i];
 
         std::vector<double> y(nl, 0.);
@@ -508,7 +655,7 @@ bool AGBStarModel::temperatureIteration()
                      << atmosphere.temperature_dust[i] << "\t"
                      << delta_temperature_gas[i] << "\t"
                      << delta_temperature_dust[i] << "\t"
-                     << radiative_transfer.radiation_field[i].eddington_flux_int*atmosphere.radius[i]*atmosphere.radius[i] << "\t"
+                     << radiative_transfer.radiation_field[i].eddington_flux_int_conservative*atmosphere.radius[i]*atmosphere.radius[i] << "\t"
                      << energy_balance_gas[i] << "\t"
                      << energy_balance_dust[i] << "\t"
                      << "\n";
@@ -561,7 +708,7 @@ std::pair<double, size_t> AGBStarModel::checkFluxConvergence()
 
   for (size_t i=0; i<atmosphere.nb_grid_points; ++i)
   {
-    const double flux = radiative_transfer.radiation_field[i].eddington_flux_int
+    const double flux = radiative_transfer.radiation_field[i].eddington_flux_int_conservative
                         * atmosphere.radius[i]*atmosphere.radius[i];
     const double rel_difference = (flux - target_flux)/target_flux;
 

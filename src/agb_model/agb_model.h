@@ -45,6 +45,10 @@ class AGBStarModel{
     unsigned int temp_iter_count = 0;
     double prev_max_rel_change = 1e30;                         //last applied max |dT|/T
     bool anderson_was_active = false;                          //activation-edge tracker
+    //two-phase corrector: begin with Unsoeld-Lucy, latch on the linearisation once it is
+    //safe (see config.linearisation_start_unsoeld_lucy and the switch thresholds)
+    bool linearisation_active = false;
+    unsigned int linearisation_ready_count = 0;
     std::vector<double> relaxation_gas, relaxation_dust;       //per-layer omega
     std::vector<double> prev_delta_b_gas, prev_delta_b_dust;   //previous delta_B
     std::vector<std::vector<double>> anderson_x_gas, anderson_f_gas;   //T and residual history
@@ -54,6 +58,11 @@ class AGBStarModel{
     bool chemistryDustIteration();
     bool chemistryHydroIteration();
     void radiativeTransfer();
+
+    //movable-grid step: redistribute the radial nodes by equidistribution of a
+    //monitor over flux-mean opacity, gas temperature and nucleation rate, remap the
+    //structure, rebuild the RT geometry and reset stale per-node iteration state
+    void applyMovableGrid();
 
     //Anderson mixing on a temperature profile. x_k is the current profile, f_k the
     //relaxed correction (so G(x_k) = x_k + f_k). Pushes the pair onto the history,

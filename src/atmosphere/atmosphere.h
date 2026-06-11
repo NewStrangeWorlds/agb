@@ -52,6 +52,12 @@ class Atmosphere{
 
     void equationOfState();
     void writeStructure(const std::string file_path);
+
+    //Remap the persistent structure (T_gas, T_dust, rho, p, v) from the current
+    //radial grid onto new_radius and adopt it as the grid. Used by the movable-grid
+    //step; chemistry/dust/opacities/radiation field are recomputed downstream and
+    //need no remapping.
+    void remapToGrid(const std::vector<double>& new_radius);
   protected:
     ModelConfig* config;
 

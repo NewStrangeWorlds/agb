@@ -28,6 +28,10 @@ class Hydrodynamics{
     void calcWindVelocity();
     void saveOutput(const std::string file_path);
 
+    //discard the Henyey warm-start state; call after the radial grid has moved, so
+    //the next solve does not warm-start from a solution on the old node positions
+    void resetWarmStart();
+
     //provide the (frozen) dust kernels so the Henyey solver can couple the
     //dust-moment equations: J* [1/(cm^3 s)] and growth timescale tau [s] per point
     void setDustState(

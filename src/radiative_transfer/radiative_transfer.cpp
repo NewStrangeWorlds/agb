@@ -52,6 +52,19 @@ RadiativeTransfer::RadiativeTransfer(
 
 
 
+void RadiativeTransfer::rebuildGeometry()
+{
+  //discard the old geometry and rebuild it from the current atmosphere->radius
+  impact_parameter_grid.clear();
+
+  createImpactParameterGrid();
+
+  for (size_t i=0; i<nb_grid_points; ++i)
+    radiation_field[i].createAngleGrid(impact_parameter_grid, atmosphere->radius[i], i);
+}
+
+
+
 //Precompute the iteration-invariant thermal emission term
 //  absorption_gas*B(T_gas) + absorption_dust*B(T_dust)
 //for every spectral point and grid point. Temperature and opacities are fixed
@@ -313,6 +326,14 @@ void RadiativeTransfer::solveRadiativeTransfer()
   #pragma omp parallel for
   for (size_t i=0; i<nb_grid_points; ++i)
     radiation_field[i].wavelengthIntegration();
+
+  //replace the (non-conservative, eq. 2.58) frequency-integrated flux with the
+  //conservative eq. 2.59 form, leaving the monochromatic eddington_flux untouched
+  if (config->flux_from_divergence)
+    conservativeFluxIntegral();
+
+  if (std::getenv("FLUX_CONSIST"))
+    fluxConsistencyDiagnostic();
 
   const auto rt_wall_t1 = std::chrono::steady_clock::now();
   std::cout << "RT solve wall time: "

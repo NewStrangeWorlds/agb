@@ -13,6 +13,7 @@
 #include "../config/config.h"
 #include "../additional/physical_const.h"
 #include "../additional/exceptions.h"
+#include "../additional/interpolation.h"
 
 namespace agb {
 
@@ -93,6 +94,25 @@ std::vector<double> Atmosphere::cgsToBar(const std::vector<double> pressure_data
     p *= 1e-6;
 
   return pressure_data_bar;
+}
+
+
+void Atmosphere::remapToGrid(const std::vector<double>& new_radius)
+{
+  //interpolate the persistent state from the OLD radius (still in `radius`) onto
+  //the new grid; positive quantities (rho, p) in log space
+  temperature_gas  = aux::interpolate(radius, temperature_gas,  new_radius);
+  temperature_dust = aux::interpolate(radius, temperature_dust, new_radius);
+  velocity         = aux::interpolate(radius, velocity,         new_radius);
+  mass_density     = aux::interpolate(radius, mass_density,     new_radius, true);
+  pressure         = aux::interpolate(radius, pressure,         new_radius, true);
+
+  //adopt the new grid (radius_grid is r normalised to the inner radius)
+  radius = new_radius;
+  for (size_t i=0; i<nb_grid_points; ++i)
+    radius_grid[i] = radius[i] / radius[0];
+
+  pressure_bar = cgsToBar(pressure);
 }
 
 
