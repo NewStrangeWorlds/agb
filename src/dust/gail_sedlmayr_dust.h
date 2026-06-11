@@ -68,6 +68,7 @@ class GailSedlmayrDust: public DustSpecies{
 
     std::vector<double> nucleation_rate;
     std::vector<double> growth_rate;
+    std::vector<double> degree_of_condensation;
 
     double nucleationRate(
       const double temperature,
