@@ -198,6 +198,7 @@ void Hydrodynamics::calcWindVelocity()
 
   //store the mass loss rate in solar masses per year for output/diagnostics
   mass_loss_rate = mass_loss_rate_cgs / constants::mass_sun * constants::year;
+  atmosphere->mass_loss_rate = mass_loss_rate;
 
 
   //Under-relaxation of the velocity update. Via mass conservation the radiative
@@ -254,9 +255,10 @@ void Hydrodynamics::calcWindVelocity()
   std::vector<double> mass_density = massDensity(mass_loss_rate_cgs);
 
   std::cout << "Critical point: " << critical_point << "\n";
-  std::cout << "Mass loss rate (fixed): " << mass_loss_rate
-            << "  eigenvalue: " << mass_loss_rate_eigenvalue / constants::mass_sun * constants::year
-            << "  eigenvalue/fixed: " << mass_loss_rate_eigenvalue / mass_loss_rate_cgs << "\n";
+  std::cout << "Mass loss rate: " << mass_loss_rate << "\n";
+  // std::cout << "Mass loss rate (fixed): " << mass_loss_rate
+  //           << "  eigenvalue: " << mass_loss_rate_eigenvalue / constants::mass_sun * constants::year
+  //           << "  eigenvalue/fixed: " << mass_loss_rate_eigenvalue / mass_loss_rate_cgs << "\n";
 }
 
 

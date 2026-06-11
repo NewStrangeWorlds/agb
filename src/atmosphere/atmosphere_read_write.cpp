@@ -76,7 +76,7 @@ void Atmosphere::writeStructure(const std::string file_path)
        << "M* = " << config->stellar_mass/constants::mass_sun << "  "
        << "L* = " << std::scientific << config->stellar_luminosity/constants::luminosity_sun << "  "
        << "C/O = " << std::fixed << config->c_o_ratio << "\t"
-       << "dM/dt = " << std::fixed << "\n";
+       << "dM/dt = " << std::fixed << mass_loss_rate << "\n";
 
   file << std::setw(16) << std::left << "#r/R*" << "\t"
        << std::setw(16) << std::left << "r(cm)" << "\t"
