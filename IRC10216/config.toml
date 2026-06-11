@@ -1,0 +1,74 @@
+# AGB dust-driven wind model configuration (IRC+10216)
+
+[star]
+radius         = 1050.0     # R_sun
+mass           = 0.7        # M_sun
+luminosity     = 3.0e4      # L_sun
+c_o_ratio      = 1.40
+
+[model]
+starting_model          = "thierry_irc10216.dat"   # a path, or "grey" for the Lucy bootstrap
+fastchem_parameter_file = "fastchem_parameters.dat"
+
+[spectral_grid]
+min_wavelength = 0.3        # micron
+max_wavelength = 50.0       # micron
+resolution     = 1000
+
+[radiative_transfer]
+nb_iterations             = 40
+convergence               = 1.0e-4
+use_spline_discretisation = false
+flux_from_divergence      = true     # conservative (eq. 2.59) integrated flux
+
+[temperature]
+nb_iterations       = 300
+convergence         = 1.0e-3
+max_relative_change = 0.01
+smooth_profile      = false
+
+# full-linearisation corrector (omit any key to keep its built-in default)
+use_linearisation                = true
+linearisation_relaxation         = 0.5     # under-relax the Newton step (dust-front stability)
+linearisation_start_unsoeld_lucy = true    # robust UL phase first, then latch to linearisation
+linearisation_switch_dt_fraction = 0.5     # switch once max|dT|/T < this * max_relative_change ...
+linearisation_switch_re_residual = 0.03    # ... AND the RE residual is below this ...
+linearisation_switch_count       = 3       # ... for this many consecutive steps
+linearisation_flux_constraint    = true    # composite flux-constancy term (eq. 3.64)
+linearisation_xi                 = 1.0
+linearisation_zeta_tau_scale     = 1.0
+# Unsoeld-Lucy robustness knobs (relaxation_*, use_anderson, anderson_*) keep their
+# defaults unless set here.
+
+[hydrodynamics]
+nb_iterations     = 60
+convergence       = 1.0e-3
+use_henyey_solver = false
+
+[dust]
+refractive_index_file = "../opacity_data/Amorphous_C_Rouleau.dat"
+
+[movable_grid]
+enabled = false
+
+[opacity]
+path = "/media/data/opacity_data/helios-k/"
+species = [
+  { symbol = "CIA-H2-H2", folder = "CIA/H2-H2" },
+  { symbol = "CIA-H2-He", folder = "CIA/H2-He" },
+  { symbol = "CIA-H-He",  folder = "CIA/H-He" },
+  { symbol = "H-",        folder = "none" },
+  { symbol = "H2",        folder = "none" },
+  { symbol = "He",        folder = "none" },
+  { symbol = "H",         folder = "none" },
+  { symbol = "H2O",       folder = "Molecules/1H2-16O__POKAZATEL_e2b" },
+  { symbol = "CO",        folder = "Molecules/12C-16O__Li2015_e2b" },
+  { symbol = "CO2",       folder = "Molecules/12C-16O2__UCL-4000_e2b" },
+  { symbol = "C2H2",      folder = "Molecules/12C2-1H2__aCeTY_e2b" },
+]
+
+[output]
+spectrum   = "spectrum.dat"
+atmosphere = "atmosphere.dat"
+dust       = "dust.dat"
+hydro      = "hydro.dat"
