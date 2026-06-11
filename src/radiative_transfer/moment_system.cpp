@@ -438,4 +438,128 @@ void RadiativeTransfer::assembleMomentSystemFluxTaylor(
 }
 
 
+//RT half of the full linearisation (thesis eq. 3.51): assemble, for one frequency, the
+//frozen Taylor moment operator V = M_nu, the diagonal thermal source dS_{s,i} =
+//d rhs_i/d T_{s,i}, and the residual K_nu = rhs_nu - M_nu J_nu. The temperature-correction
+//module consumes these (constraints, Rybicki elimination, dense Newton solve). The
+//inner-boundary flux-injection term's T_gas[0] dependence is left frozen (not linearised).
+void RadiativeTransfer::buildLinearisedMomentSystem(
+  const size_t nu,
+  const std::vector<double>& radius,
+  const std::vector<double>& radius2,
+  const double boundary_flux_correction,
+  aux::TriDiagonalMatrix& m,
+  std::vector<double>& source_gas,
+  std::vector<double>& source_dust,
+  std::vector<double>& residual_K)
+{
+  const size_t D = nb_grid_points;
+  const double wl = spectral_grid->wavelength_list[nu];
+
+  const double boundary_planck_derivative =
+    aux::planckFunctionDerivWavelength(atmosphere->temperature_gas[0], wl);
+
+  const std::vector<double>& x_grid = generateXGrid(
+    extinction_coeff[nu], radius, sphericality_factor[nu]);
+
+  //resize allocates the a/b/c diagonals AND the solveInto() scratch buffers the caller
+  //needs for the Rybicki solves
+  m.resize(D);
+  static thread_local std::vector<double> rhs_nu;
+  rhs_nu.assign(D, 0.);
+
+  assembleMomentSystemTaylor(
+    x_grid, radius, radius2,
+    planck_emission[nu], extinction_coeff[nu], scattering_coeff[nu],
+    eddington_factor_f[nu], boundary_eddington_factor_h[nu], sphericality_factor[nu],
+    boundary_planck_derivative, boundary_flux_correction,
+    m, rhs_nu);
+
+  //diagonal source d rhs_i/d T_{s,i} = -c(i) kappa_abs,s dB/dT, c(i)=radius2/(q chi);
+  //the boundary rows carry the extra hr/2, hl/2 factor of the Taylor assembly
+  source_gas.assign(D, 0.);
+  source_dust.assign(D, 0.);
+  for (size_t i=0; i<D; ++i)
+  {
+    const double dB_gas  = aux::planckFunctionDerivWavelength(atmosphere->temperature_gas[i],  wl);
+    const double dB_dust = aux::planckFunctionDerivWavelength(atmosphere->temperature_dust[i], wl);
+
+    const double c_i = radius2[i] / sphericality_factor[nu][i] / extinction_coeff[nu][i];
+
+    double face = 1.0;
+    if (i == 0)       face = 0.5*(x_grid[1] - x_grid[0]);
+    else if (i+1==D)  face = 0.5*(x_grid[D-1] - x_grid[D-2]);
+
+    source_gas[i]  = - face * c_i * atmosphere->absorption_coeff_gas[i][nu]  * dB_gas;
+    source_dust[i] = - face * c_i * atmosphere->absorption_coeff_dust[i][nu] * dB_dust;
+  }
+
+  //residual K = rhs_nu - M_nu J_nu (~0 when the RT is converged)
+  residual_K.assign(D, 0.);
+  residual_K[0]   = rhs_nu[0]   - (m.b[0]*radiation_field[0].mean_intensity[nu]
+                                 + m.c[0]*radiation_field[1].mean_intensity[nu]);
+  for (size_t i=1; i+1<D; ++i)
+    residual_K[i] = rhs_nu[i]   - (m.a[i]*radiation_field[i-1].mean_intensity[nu]
+                                 + m.b[i]*radiation_field[i].mean_intensity[nu]
+                                 + m.c[i]*radiation_field[i+1].mean_intensity[nu]);
+  residual_K[D-1] = rhs_nu[D-1] - (m.a[D-1]*radiation_field[D-2].mean_intensity[nu]
+                                 + m.b[D-1]*radiation_field[D-1].mean_intensity[nu]);
+}
+
+
+//Diagnostic (env FLUX_CONSIST): contrast the node-centred conservative flux integral with a
+//face-centred flux r^2 H_{i+1/2} = d(a J)/dX (a = f q r^2). Prints how far each r^2 H_int
+//stays from the target L/(16 pi^2).
+void RadiativeTransfer::fluxConsistencyDiagnostic()
+{
+  const size_t D = nb_grid_points;
+  const size_t N = nb_spectral_points;
+  const std::vector<double>& lambda = spectral_grid->wavelength_list;
+  const double target = config->stellar_luminosity / (16. * constants::pi * constants::pi);
+
+  std::vector<double> radius(D), radius2(D);
+  for (size_t i=0; i<D; ++i) { radius[i] = atmosphere->radius[i]; radius2[i] = radius[i]*radius[i]; }
+
+  std::vector<double> w_int(N, 0.);
+  if (N >= 2)
+  {
+    w_int[0] = -0.5*(lambda[1]-lambda[0]);  w_int[N-1] = -0.5*(lambda[N-1]-lambda[N-2]);
+    for (size_t n=1; n+1<N; ++n) w_int[n] = -0.5*(lambda[n+1]-lambda[n-1]);
+  }
+
+  std::vector<double> r2h_face(D-1, 0.);
+  for (size_t n=0; n<N; ++n)
+  {
+    const std::vector<double>& x = generateXGrid(extinction_coeff[n], radius, sphericality_factor[n]);
+    for (size_t i=0; i+1<D; ++i)
+    {
+      const double ai  = eddington_factor_f[n][i]   * sphericality_factor[n][i]   * radius2[i];
+      const double ai1 = eddington_factor_f[n][i+1] * sphericality_factor[n][i+1] * radius2[i+1];
+      const double Ji  = radiation_field[i].mean_intensity[n];
+      const double Ji1 = radiation_field[i+1].mean_intensity[n];
+      r2h_face[i] += w_int[n] * (ai1*Ji1 - ai*Ji) / (x[i+1] - x[i]);
+    }
+  }
+
+  double node_lo=1e300, node_hi=-1e300, face_lo=1e300, face_hi=-1e300;
+  for (size_t i=1; i+1<D; ++i)
+  {
+    const double node = radiation_field[i].eddington_flux_int_conservative * radius2[i];
+    node_lo = std::min(node_lo, node); node_hi = std::max(node_hi, node);
+  }
+  for (size_t i=1; i+2<D; ++i)
+  {
+    face_lo = std::min(face_lo, r2h_face[i]); face_hi = std::max(face_hi, r2h_face[i]);
+  }
+
+  std::cout << "[FLUXCON] target r2H = " << target << "\n"
+            << "[FLUXCON] conservative (eq2.59) r2H_int in ["
+            << node_lo << ", " << node_hi << "]  spread = "
+            << (node_hi-node_lo)/target*100. << " %\n"
+            << "[FLUXCON] face-centred (eq2.59) r2H_int in ["
+            << face_lo << ", " << face_hi << "]  spread = "
+            << (face_hi-face_lo)/target*100. << " %\n";
+}
+
+
 }

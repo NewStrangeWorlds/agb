@@ -65,7 +65,7 @@ set(SRC
   src/radiative_transfer/impact_parameter.cpp
   src/radiative_transfer/radiation_field.cpp
   src/radiative_transfer/moment_system.cpp
-  src/radiative_transfer/linearisation.cpp
+  src/temperature_correction/temperature_correction_linearisation.cpp
   src/temperature_correction/temperature_correction.cpp
   src/dust/dust_species.cpp
   src/dust/analytic_dust.cpp

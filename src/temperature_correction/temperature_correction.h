@@ -12,6 +12,7 @@ namespace agb {
 class ModelConfig;
 class SpectralGrid;
 class RadiationField;
+class RadiativeTransfer;
 
 
 class TemperatureCorrection{
@@ -36,6 +37,22 @@ class TemperatureCorrection{
       std::vector<std::vector<double>>& absorption_coeff,
       std::vector<double>& relaxation,
       std::vector<double>& prev_delta_b);
+
+    //Full-linearisation (Newton) temperature correction (thesis 3.2.3 / App. B.1): the
+    //radiative-equilibrium peer of calculate(). Uses RadiativeTransfer for the per-frequency
+    //linearised moment operator (buildLinearisedMomentSystem) and owns the RE constraints,
+    //the Rybicki elimination and the dense 2D x 2D Newton solve; returns the (relaxed but
+    //un-capped) temperature changes. Requires the Taylor moment discretisation.
+    void linearisedCorrection(
+      RadiativeTransfer& radiative_transfer,
+      const std::vector<double>& temperature_gas,
+      const std::vector<double>& temperature_dust,
+      const std::vector<double>& radius,
+      const std::vector<std::vector<double>>& extinction_coeff,
+      const std::vector<std::vector<double>>& absorption_coeff_gas,
+      const std::vector<std::vector<double>>& absorption_coeff_dust,
+      std::vector<double>& delta_temperature_gas,
+      std::vector<double>& delta_temperature_dust);
   protected:
     ModelConfig* config;
     SpectralGrid* spectral_grid;
