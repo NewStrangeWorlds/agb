@@ -385,6 +385,7 @@ bool AGBStarModel::temperatureIteration()
 
 
   //for (unsigned int it=0; it<config.nb_temperature_iter; ++it)
+  //currently, we do only a single temperature correction step
   for (unsigned int it=0; it<1; ++it)
   {
     std::cout << "Calculating gas opacities\n\n";
@@ -400,8 +401,6 @@ bool AGBStarModel::temperatureIteration()
     {
       for (size_t j=0; j<spectral_grid.nbSpectralPoints(); ++j)
       {
-        //atmosphere.scattering_coeff_gas[i][j] = 0;
-        //atmosphere.scattering_coeff_dust[i][j] = 0;
         atmosphere.absorption_coeff[i][j] = atmosphere.absorption_coeff_gas[i][j] + atmosphere.absorption_coeff_dust[i][j];
         atmosphere.scattering_coeff[i][j] = atmosphere.scattering_coeff_gas[i][j] + atmosphere.scattering_coeff_dust[i][j];
 
@@ -425,7 +424,13 @@ bool AGBStarModel::temperatureIteration()
       //full-linearisation Newton step: the exact dJ/dT response of the converged RT
       //operator drives both local radiative-equilibrium residuals to zero, removing
       //the Unsoeld-Lucy accuracy floor. Anderson is bypassed (Newton already mixes).
-      radiative_transfer.linearisedTemperatureCorrection(
+      //The corrector lives in TemperatureCorrection; RadiativeTransfer supplies the
+      //per-frequency linearised moment operator.
+      temperature_correction.linearisedCorrection(
+        radiative_transfer,
+        atmosphere.temperature_gas, atmosphere.temperature_dust,
+        atmosphere.radius, atmosphere.extinction_coeff,
+        atmosphere.absorption_coeff_gas, atmosphere.absorption_coeff_dust,
         delta_temperature_gas, delta_temperature_dust);
 
       //Per-layer adaptive under-relaxation of the Newton step (same mechanism as the
@@ -599,55 +604,6 @@ bool AGBStarModel::temperatureIteration()
                   << temp_iter_count << " (max|dT|/T=" << max_rel_change
                   << ", RE residual=" << re_residual << ")\n";
       }
-    }
-
-    // auto max_energy_balance_gas = checkEnergyBalance(
-    //   atmosphere.temperature_gas, 
-    //   atmosphere.absorption_coeff,
-    //   energy_balance_gas);
-    // auto max_energy_balance_dust = checkEnergyBalance(
-    //   atmosphere.temperature_dust,
-    //   atmosphere.absorption_coeff,
-    //   energy_balance_dust);
-
-    //RT_FLUX_CHECK: verify the RT is internally flux-consistent, i.e. that its flux
-    //and its mean intensity satisfy the zeroth moment equation
-    //  d(r^2 H)/dr = r^2 * integral kappa_abs (B - J) dnu
-    //(gas emits at T_gas, dust at T_dust; scattering cancels out). A mismatch means
-    //the moment-system J and the calcFlux H disagree across e.g. the steep dust
-    //opacity gradient -> flux non-conservation that no temperature correction can fix.
-    if (std::getenv("RT_FLUX_CHECK"))
-    {
-      const size_t np = atmosphere.nb_grid_points;
-      const size_t nl = spectral_grid.nbSpectralPoints();
-      std::vector<double> r2h(np, 0.), rhs(np, 0.);
-
-      for (size_t i=0; i<np; ++i)
-      {
-        r2h[i] = radiative_transfer.radiation_field[i].eddington_flux_int_conservative
-               * atmosphere.radius[i]*atmosphere.radius[i];
-
-        std::vector<double> y(nl, 0.);
-        for (size_t j=0; j<nl; ++j)
-        {
-          const double Jnu = radiative_transfer.radiation_field[i].mean_intensity[j];
-          const double Bg  = aux::planckFunctionWavelength(atmosphere.temperature_gas[i],  spectral_grid.wavelength_list[j]);
-          const double Bd  = aux::planckFunctionWavelength(atmosphere.temperature_dust[i], spectral_grid.wavelength_list[j]);
-          y[j] = atmosphere.absorption_coeff_gas[i][j]  * (Bg - Jnu)
-               + atmosphere.absorption_coeff_dust[i][j] * (Bd - Jnu);
-        }
-        rhs[i] = atmosphere.radius[i]*atmosphere.radius[i]
-               * radiative_transfer.radiation_field[i].wavelengthIntegration(y);
-      }
-
-      std::cout << "\n[RTFC] i\tr2H\td(r2H)/dr\tr2*kabs(B-J)\tratio\n";
-      for (size_t i=1; i+1<np; ++i)
-      {
-        const double dflux = (r2h[i+1]-r2h[i-1])/(atmosphere.radius[i+1]-atmosphere.radius[i-1]);
-        std::cout << "[RTFC] " << i << "\t" << r2h[i] << "\t" << dflux << "\t" << rhs[i]
-                  << "\t" << (rhs[i]!=0. ? dflux/rhs[i] : 0.) << "\n";
-      }
-      std::cout << "\n";
     }
 
     for (size_t i=0; i<atmosphere.nb_grid_points; ++i)

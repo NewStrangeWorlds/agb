@@ -152,14 +152,27 @@ class RadiativeTransfer{
     //unchanged, so only positions are refreshed.
     void rebuildGeometry();
 
-    //Full-linearisation temperature correction: one Newton step on (T_gas, T_dust)
-    //with the converged RT operator frozen. Eliminates the per-frequency mean
-    //intensities by a Rybicki-type reduction and solves a dense 2D x 2D temperature
-    //system, returning the (unrelaxed) temperature changes. Requires the Taylor
-    //moment discretisation. Must be called after solveRadiativeTransfer().
-    void linearisedTemperatureCorrection(
-      std::vector<double>& delta_temperature_gas,
-      std::vector<double>& delta_temperature_dust);
+    //RT half of the full-linearisation temperature correction (thesis eq. 3.51): for one
+    //frequency, assemble the (frozen, Taylor) moment operator V = M_nu, the diagonal
+    //source dS_{s,i} = d rhs_i / d T_{s,i} (s in {gas,dust}), and the moment-equation
+    //residual K_nu = rhs_nu - M_nu J_nu. TemperatureCorrection::linearisedCorrection
+    //consumes these (it owns the radiative-equilibrium constraints, the Rybicki
+    //elimination via V.solveInto, and the dense Newton solve). Requires the Taylor
+    //discretisation; call after solveRadiativeTransfer(). boundary_flux_correction is the
+    //(frequency-invariant) value from boundaryFluxCorrection(), passed in once.
+    void buildLinearisedMomentSystem(
+      const size_t nu,
+      const std::vector<double>& radius,
+      const std::vector<double>& radius2,
+      const double boundary_flux_correction,
+      aux::TriDiagonalMatrix& moment_matrix,
+      std::vector<double>& source_gas,
+      std::vector<double>& source_dust,
+      std::vector<double>& residual_K);
+
+    //inner-boundary diffusion flux correction (frequency-invariant); needed by the
+    //linearised corrector to reconstruct rhs_nu for the residual K_nu
+    double boundaryFluxCorrection();
 
     //Diagnostic (env FLUX_CONSIST): compare the node-centred flux from calcFlux with a
     //face-centred (conservative) flux r^2 H_{i+1/2} = d(a J)/dX whose divergence equals
@@ -203,8 +216,7 @@ class RadiativeTransfer{
 
     void calcEddingtonFactors();
     void calcSphericalityFactor();
-    
-    double boundaryFluxCorrection();
+
     const std::vector<double>& sourceFunction(const int nu);
 
     void solveMomentSystem(
