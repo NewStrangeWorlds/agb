@@ -211,9 +211,6 @@ bool AGBStarModel::chemistryDustIteration()
 
   dust_species->calcDistribution(condensable_carbon_abundance);
 
-  if (config.output_dust_path != "")
-    dust_species->saveOutput(config.output_dust_path);
-
   return true;
 }
 

@@ -275,7 +275,7 @@ void GailSedlmayrDust::calcDistribution(const double condensable_carbon_abundanc
 std::vector<double> GailSedlmayrDust::degreeOfCondensation(
   const double condensable_carbon_abundance)
 {
-  std::vector<double> degree_of_condensation(atmosphere->nb_grid_points, 0);
+  degree_of_condensation.assign(atmosphere->nb_grid_points, 0.0);
 
   for (size_t i=0; i<nb_grid_points; ++i)
   {
@@ -303,10 +303,26 @@ void GailSedlmayrDust::saveOutput(const std::string file_path)
     return;
   }
 
-  std::cout << "Saving dust output to " << file_path << "\n\n";
+  std::cout << "Saving dust structure to " << file_path << "\n\n";
 
-  file << std::setprecision(10) << std::scientific << "#r/R*\tn_<H>(cm-3)\tnumber_density(cm-3)\tradius(micron)\tnucleation_rate\tgrowth_rate\tK0\tK1\tK2\tK3\n";
-  
+  file << std::setw(16) << std::left << "#r/R*" << "\t"
+       << std::setw(16) << std::left << "n<H>(cm-3)" << "\t"
+       << std::setw(16) << std::left << "Tgas(K)" << "\t"
+       << std::setw(16) << std::left << "f_cond" << "\t"
+       << std::setw(16) << std::left << "n_C(cm-3)" << "\t"
+       << std::setw(16) << std::left << "n_C2(cm-3)" << "\t"
+       << std::setw(16) << std::left << "n_C2H(cm-3)" << "\t"
+       << std::setw(16) << std::left << "n_C2H2(cm-3)" << "\t"
+       << std::setw(16) << std::left << "n_d(cm-3)" << "\t"
+       << std::setw(16) << std::left << "a_d(micron)" << "\t"
+       << std::setw(16) << std::left << "J*(s-1 cm-3)" << "\t"
+       << std::setw(16) << std::left << "tau_growth" << "\t"
+       << std::setw(16) << std::left << "K0" << "\t"
+       << std::setw(16) << std::left << "K1" << "\t"
+       << std::setw(16) << std::left << "K2" << "\t"
+       << std::setw(16) << std::left << "K3" << "\t"
+       << std::setw(16) << std::left << "V_d(cm3)" << "\n";
+
   for (size_t i=0; i<nb_grid_points; ++i)
   {  
      const double number_density_c = atmosphere->number_densities[i][_C];
@@ -314,10 +330,12 @@ void GailSedlmayrDust::saveOutput(const std::string file_path)
      const double number_density_c2h = atmosphere->number_densities[i][_C2H];
      const double number_density_c2h2 = atmosphere->number_densities[i][_C2H2];
      const double temperature = atmosphere->temperature_gas[i];
-
-     file << atmosphere->radius_grid[i] << "\t"
+     
+     file << std::setprecision(10) << std::scientific
+          << atmosphere->radius_grid[i] << "\t"
           << atmosphere->total_h_density[i] << "\t"
           << temperature << "\t"
+          << degree_of_condensation[i] << "\t"
           << number_density_c << "\t"
           << number_density_c2 << "\t"
           << number_density_c2h << "\t"
@@ -330,7 +348,7 @@ void GailSedlmayrDust::saveOutput(const std::string file_path)
           << dust_moments[1][i] << "\t"
           << dust_moments[2][i] << "\t"
           << dust_moments[3][i] << "\t"
-          << dust_moments[3][i]/dust_moments[0][i] * 4./3. * constants::pi * std::pow(monomer_radius, 3) << "\t"
+          << dust_moments[3][i]/dust_moments[0][i] * 4./3. * constants::pi * std::pow(monomer_radius, 3)
           << "\n";
   }
 
