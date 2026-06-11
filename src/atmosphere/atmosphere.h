@@ -34,6 +34,8 @@ class Atmosphere{
     std::vector<double> mass_density;
     std::vector<double> velocity;
 
+    double mass_loss_rate = 0;
+
     std::vector<std::vector<double>> number_densities;
     std::vector<double> mean_molecuar_weight;
     std::vector<double> total_element_density;
@@ -64,6 +66,10 @@ class Atmosphere{
     std::vector<double> cgsToBar(const std::vector<double> pressure_data);
 
     void readStructure(const std::string file_path);
+
+    //build a logarithmic radial grid and a static hydrostatic grey (Lucy) starting
+    //structure for a "grey" start (see config [grid]); no structure file needed
+    void buildGreyStart();
 };
 
 

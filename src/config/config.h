@@ -38,7 +38,7 @@ struct ModelConfig {
 
   unsigned int nb_radiative_transfer_iter = 30;
   double radiative_transfer_convergence = 1e-4;
-  bool use_spline_discretisation = true;
+  bool use_spline_discretisation = false;
 
   //Make the frequency-INTEGRATED flux eddington_flux_int conservative via the flux-
   //divergence form (thesis eq. 2.59): r^2 H_int = L/(16 pi^2) + int r^2 [int kappa_abs(B-J)
@@ -156,6 +156,17 @@ struct ModelConfig {
   //Melia-Phi shooting method (kept for cross-checks). Now a config.toml key;
   //flip here if needed.
   bool use_henyey_solver = false;
+
+  //Radial grid generated when starting_model = "grey" (the Lucy grey bootstrap) instead
+  //of reading a structure file. A logarithmic mesh of grid_nb_points cells spans
+  //grid_inner_radius*R_* to grid_outer_radius*R_*. (Ignored when a structure file is read,
+  //which carries its own grid.) config.toml: [grid].
+  size_t grid_nb_points    = 260;
+  double grid_inner_radius = 1.0;    //inner boundary, in units of R_*
+  double grid_outer_radius = 25.0;   //outer boundary, in units of R_*
+  //grey gas mass-opacity [cm^2/g] for the hydrostatic grey start: sets the optical-depth
+  //scale and hence the photospheric density of the seed (config.toml: [grid] gas_opacity).
+  double grey_gas_opacity  = 1.0e-4;
 
   std::string output_spectrum_path = "";
   std::string output_atmosphere_path = "";
