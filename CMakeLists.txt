@@ -45,6 +45,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR})
 set(SRC
   src/model_main/model_main.cpp
   src/agb_model/agb_model.cpp
+  src/agb_model/anderson_step.cpp
+  src/agb_model/movable_grid.cpp
   src/config/config.cpp
   src/additional/aux_functions.cpp
   src/spectral_grid/spectral_grid.cpp

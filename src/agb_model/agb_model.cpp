@@ -14,50 +14,6 @@
 
 namespace agb{
 
-
-namespace {
-
-//Dense Gaussian elimination with partial pivoting for the small (m x m) Anderson
-//least-squares system. Returns an empty vector if the matrix is singular.
-std::vector<double> solveLinearSystem(
-  std::vector<std::vector<double>> a,
-  std::vector<double> b)
-{
-  const size_t m = b.size();
-
-  for (size_t col=0; col<m; ++col)
-  {
-    size_t pivot = col;
-    for (size_t row=col+1; row<m; ++row)
-      if (std::abs(a[row][col]) > std::abs(a[pivot][col])) pivot = row;
-
-    if (std::abs(a[pivot][col]) < 1e-300)
-      return std::vector<double>{};
-
-    std::swap(a[col], a[pivot]);
-    std::swap(b[col], b[pivot]);
-
-    for (size_t row=col+1; row<m; ++row)
-    {
-      const double factor = a[row][col] / a[col][col];
-      for (size_t k=col; k<m; ++k) a[row][k] -= factor * a[col][k];
-      b[row] -= factor * b[col];
-    }
-  }
-
-  std::vector<double> x(m, 0.);
-  for (size_t row=m; row-- > 0; )
-  {
-    double sum = b[row];
-    for (size_t k=row+1; k<m; ++k) sum -= a[row][k] * x[k];
-    x[row] = sum / a[row][row];
-  }
-
-  return x;
-}
-
-}
-
 AGBStarModel::AGBStarModel(const std::string folder)
  : config(folder)
  , spectral_grid(&config)
@@ -256,62 +212,6 @@ void AGBStarModel::radiativeTransfer()
   }
   
   radiative_transfer.solveRadiativeTransfer();
-}
-
-
-
-void AGBStarModel::applyMovableGrid()
-{
-  const size_t np = atmosphere.nb_grid_points;
-
-  //monitor quantities on the current grid: flux-mean extinction, gas temperature,
-  //and dust nucleation rate
-  std::vector<double> chi_h(np, 0.);
-  for (size_t i=0; i<np; ++i)
-    chi_h[i] = radiative_transfer.radiation_field[i].fluxWeightedExtinction(
-                 atmosphere.extinction_coeff[i]);
-
-  std::vector<double> jstar = dust_species->nucleationRate();
-  if (jstar.size() != np) jstar.assign(np, 1.0);
-
-  const std::vector<std::vector<double>> quantities =
-    { chi_h, atmosphere.temperature_gas, jstar, atmosphere.velocity };
-  const std::vector<double> weights =
-    { config.monitor_weight_opacity,
-      config.monitor_weight_temperature,
-      config.monitor_weight_nucleation,
-      config.monitor_weight_velocity };
-
-  const std::vector<double> target = aux::equidistributedGrid(
-    atmosphere.radius, quantities, weights,
-    config.monitor_smoothing_passes, config.monitor_max, config.monitor_rel_floor);
-
-  //under-relax the node motion; pin the boundaries and keep the grid strictly monotone
-  std::vector<double> new_radius(np);
-  for (size_t i=0; i<np; ++i)
-    new_radius[i] = atmosphere.radius[i]
-                  + config.grid_relaxation * (target[i] - atmosphere.radius[i]);
-  new_radius[0]    = atmosphere.radius[0];
-  new_radius[np-1] = atmosphere.radius[np-1];
-  for (size_t i=1; i<np; ++i)
-    if (new_radius[i] <= new_radius[i-1])
-      new_radius[i] = new_radius[i-1] * (1.0 + 1e-6);
-
-  //remap the structure and rebuild the grid-dependent geometry / warm starts
-  atmosphere.remapToGrid(new_radius);
-  radiative_transfer.rebuildGeometry();
-  hydrodynamics.resetWarmStart();
-
-  //reset per-node temperature-iteration state (re-initialises lazily on the new grid)
-  relaxation_gas.clear();    relaxation_dust.clear();
-  prev_delta_b_gas.clear();  prev_delta_b_dust.clear();
-  anderson_x_gas.clear();    anderson_f_gas.clear();
-  anderson_x_dust.clear();   anderson_f_dust.clear();
-  anderson_was_active = false;
-  prev_max_rel_change = 1e30;
-
-  std::cout << "Movable grid: regridded; inner/outer r/R* = "
-            << atmosphere.radius_grid.front() << " / " << atmosphere.radius_grid.back() << "\n\n";
 }
 
 
@@ -623,87 +523,6 @@ std::pair<double, size_t> AGBStarModel::checkFluxConvergence()
 
   return max_difference;
 }
-
-
-
-std::vector<double> AGBStarModel::andersonStep(
-  std::vector<std::vector<double>>& x_history,
-  std::vector<std::vector<double>>& f_history,
-  const std::vector<double>& x_k,
-  const std::vector<double>& f_k)
-{
-  const size_t n = x_k.size();
-
-  //record the current iterate/residual and trim to the window (m differences need
-  //m+1 stored pairs)
-  x_history.push_back(x_k);
-  f_history.push_back(f_k);
-
-  while (x_history.size() > config.anderson_window + 1)
-  {
-    x_history.erase(x_history.begin());
-    f_history.erase(f_history.begin());
-  }
-
-  const size_t stored = x_history.size();
-
-  //plain (damped) step G(x_k) = x_k + f_k until we have at least one difference
-  std::vector<double> result(n);
-  for (size_t i=0; i<n; ++i)
-    result[i] = x_k[i] + f_k[i];
-
-  if (stored < 2)
-    return result;
-
-  const size_t m = stored - 1; //number of difference columns
-
-  //difference matrices: dF[j] = f_{j+1} - f_j, dX[j] = x_{j+1} - x_j
-  std::vector<std::vector<double>> dF(m, std::vector<double>(n));
-  std::vector<std::vector<double>> dX(m, std::vector<double>(n));
-
-  for (size_t j=0; j<m; ++j)
-    for (size_t i=0; i<n; ++i)
-    {
-      dF[j][i] = f_history[j+1][i] - f_history[j][i];
-      dX[j][i] = x_history[j+1][i] - x_history[j][i];
-    }
-
-  //normal equations (dF^T dF) gamma = dF^T f_k  with light Tikhonov regularisation
-  std::vector<std::vector<double>> a(m, std::vector<double>(m, 0.));
-  std::vector<double> b(m, 0.);
-
-  for (size_t j=0; j<m; ++j)
-  {
-    for (size_t k=0; k<m; ++k)
-    {
-      double sum = 0.;
-      for (size_t i=0; i<n; ++i) sum += dF[j][i] * dF[k][i];
-      a[j][k] = sum;
-    }
-    double sum = 0.;
-    for (size_t i=0; i<n; ++i) sum += dF[j][i] * f_k[i];
-    b[j] = sum;
-  }
-
-  double trace = 0.;
-  for (size_t j=0; j<m; ++j) trace += a[j][j];
-  const double reg = 1e-10 * (trace/m + 1e-300);
-  for (size_t j=0; j<m; ++j) a[j][j] += reg;
-
-  std::vector<double> gamma = solveLinearSystem(a, b);
-
-  //if the solve failed (singular), fall back to the plain damped step
-  if (gamma.empty())
-    return result;
-
-  //x_{k+1} = (x_k + f_k) - sum_j gamma_j (dX_j + dF_j)
-  for (size_t j=0; j<m; ++j)
-    for (size_t i=0; i<n; ++i)
-      result[i] -= gamma[j] * (dX[j][i] + dF[j][i]);
-
-  return result;
-}
-
 
 
 std::pair<double, size_t> AGBStarModel::checkEnergyBalance(
